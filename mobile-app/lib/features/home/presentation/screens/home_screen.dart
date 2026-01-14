@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile_app/core/constants/app_constants.dart';
+import 'package:parkingzero/core/constants/app_constants.dart';
+import 'package:parkingzero/features/map_search/presentation/screens/map_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,12 +15,13 @@ class _HomeScreenState extends State<HomeScreen> {
   late PageController _pageController;
   late Timer _timer;
   int _currentPage = 0;
+  bool _isNavigating = false;
 
   final List<Map<String, String>> _carouselItems = [
     {
       'image': 'assets/images/garage_car_1.png',
-      'title': 'Transforme sua garagem em renda',
-      'subtitle': 'Proprietário em Guildford ganhando £75+',
+      'title': 'Encontre Garagens ',
+      'subtitle': 'Garagens apartir de R\$ 45+',
     },
     {
       'image': 'assets/images/garage_space_2.png',
@@ -109,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           _buildCircleButton(Icons.menu),
                           const Text(
-                            'Fronteira Parking',
+                            'ParkingZero',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 22,
@@ -129,8 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisCount: 2,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
-                      childAspectRatio:
-                          1.1, // Aumentado de 0.95 para 1.1 para dar mais altura
+                      // DIMINUÍDO para 1.0 para tornar os cards MAIS ALTOS e dar espaço ao conteúdo
+                      childAspectRatio: 1.0,
                       children: [
                         _buildActionCard(
                           context,
@@ -201,6 +203,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            // Loading Overlay
+            if (_isNavigating)
+              Container(
+                color: Colors.black.withAlpha(128),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
+                        strokeWidth: 4,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Carregando mapa...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -226,48 +255,52 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12), // Reduzido de 16 para 12
+      padding: const EdgeInsets.all(
+        12,
+      ), // Reduzido de 16 para 12 para ganhar espaço
       decoration: const BoxDecoration(
-        color: AppColors.surface, // Cinza claro
+        color: AppColors.surface,
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min, // Importante: não força expansão
         children: [
           Icon(
             icon,
             color: AppColors.primary,
-            size: 26,
-          ), // Reduzido de 28 para 26
-          const SizedBox(height: 6), // Reduzido de 8 para 6
+            size: 26, // Levemente reduzido de 28
+          ),
+          const SizedBox(height: 8), // Reduzido de 12 para 8
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.grey,
-            ), // Reduzido de 12 para 11
-          ),
-          const SizedBox(height: 3), // Reduzido de 4 para 3
-          Text(
-            subtitle,
-            maxLines: 3, // Aumentado de 2 para 3 linhas
+            maxLines: 2, // Permite 2 linhas
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 14, // Reduzido de 15 para 14
-              fontWeight: FontWeight.bold,
-              color: AppColors.textBody,
-              height: 1.15, // Altura de linha compacta
+              fontSize: 11, // Reduzido de 12 para 11
+              color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 6), // Reduzido de 8 para 6
+          const SizedBox(height: 4),
+          Expanded(
+            child: Text(
+              subtitle,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13, // Reduzido de 15 para 13 para caber melhor
+                fontWeight: FontWeight.bold,
+                color: AppColors.textBody,
+                height: 1.1, // Altura da linha mais compacta
+              ),
+            ),
+          ),
           const Align(
             alignment: Alignment.bottomRight,
             child: Icon(
               Icons.chevron_right,
               color: AppColors.primary,
               size: 18,
-            ), // Reduzido de 20 para 18
+            ),
           ),
         ],
       ),
@@ -340,93 +373,117 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         // Carousel
         SizedBox(
-          height: 300,
+          height: 360, // Aumentado para 360 para garantir espaço de sobra
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (index) {
               setState(() {
                 _currentPage = index;
               });
-              // Reseta o timer quando o usuário faz swipe manual
               _timer.cancel();
               _startAutoPlay();
             },
             itemCount: _carouselItems.length,
             itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.circular(16)),
-                    color: Colors.white,
-                    border: Border.fromBorderSide(
-                      BorderSide(color: Color(0x339E9E9E)),
+              return GestureDetector(
+                onTap: () async {
+                  setState(() => _isNavigating = true);
+                  await Future.delayed(const Duration(milliseconds: 800));
+                  if (mounted) {
+                    setState(() => _isNavigating = false);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MapScreen(),
+                      ),
+                    );
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(16)),
+                      color: Colors.white,
+                      border: Border.fromBorderSide(
+                        BorderSide(color: Color(0x339E9E9E)),
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Imagem do carousel
-                      ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          topRight: Radius.circular(16),
-                        ),
-                        child: Image.asset(
-                          _carouselItems[index]['image']!,
-                          height: 170,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 170,
-                              decoration: const BoxDecoration(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Imagem do carousel (Tamanho fixo)
+                        ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                          child: Image.asset(
+                            _carouselItems[index]['image']!,
+                            height:
+                                180, // Imagem um pouco maior para ficar bonito
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 180,
                                 color: Colors.grey,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  topRight: Radius.circular(16),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.image,
+                                    size: 50,
+                                    color: Colors.white54,
+                                  ),
                                 ),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.image,
-                                  size: 50,
-                                  color: Colors.white54,
+                              );
+                            },
+                          ),
+                        ),
+
+                        // Área de texto flexível (Ocupa todo o espaço restante)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(
+                              16.0,
+                            ), // Padding generoso
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment
+                                  .center, // Centraliza verticalmente
+                              children: [
+                                Text(
+                                  _carouselItems[index]['title']!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textBody,
+                                    height: 1.2,
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _carouselItems[index]['title']!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textBody,
-                              ),
+                                const SizedBox(
+                                  height: 8,
+                                ), // Espaçamento que você pediu
+                                Flexible(
+                                  // Permite que o texto se ajuste sem overflow
+                                  child: Text(
+                                    _carouselItems[index]['subtitle']!,
+                                    maxLines: 2, // Restaurado para 2 linhas
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _carouselItems[index]['subtitle']!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );

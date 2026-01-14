@@ -11,7 +11,20 @@ class AppColors {
   static const Color primaryDark = Color(0xFF1B5E20);
 }
 
+/// Classe que contém todas as constantes da aplicação ParkingZero.
+///
+/// Esta classe centraliza valores como cores, dimensões, textos e endpoints
+/// da API para facilitar manutenção e consistência no app.
 class AppConstants {
-  static const String appName = 'Fronteira Parking';
-  static const double defaultPadding = 16.0;
+  AppConstants._(); // Construtor privado para evitar instanciação
+
+  //=================================
+  // INFORMAÇÕES DO APLICATIVO
+  //=================================
+
+  /// Nome do aplicativo
+  static const String appName = 'ParkingZero';
+
+  /// Versão do aplicativo
+  static const String appVersion = '1.0.0';
 }

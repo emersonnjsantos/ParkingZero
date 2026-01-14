@@ -1,0 +1,18 @@
+# Ignorar diretórios desnecessários para o backend
+.git
+.gitignore
+*.md
+README*
+.env*
+.env.local
+
+# Mobile app (não necessário para deploy do backend)
+mobile-app/
+
+# Outros
+tools/
+protos/
+deploy/
+migrations/
+*.test
+*.out

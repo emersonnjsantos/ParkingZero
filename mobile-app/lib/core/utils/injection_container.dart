@@ -1,6 +1,6 @@
 import 'package:get_it/get_it.dart';
-import 'package:mobile_app/core/api/api_client.dart';
-import 'package:mobile_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:parkingzero/core/api/api_client.dart';
+import 'package:parkingzero/features/auth/presentation/bloc/auth_bloc.dart';
 
 final sl = GetIt.instance;
 

@@ -1,39 +1,30 @@
-import 'package:dio/dio.dart';
+import 'package:grpc/grpc.dart';
 
 class ApiClient {
-  late Dio _dio;
-  
-  // URL base para o Backend no Cloud Run (exemplo)
-  static const String baseUrl = 'https://backend-api-xyz-uc.a.run.app/api/v1';
+  static final ApiClient _instance = ApiClient._internal();
+  late ClientChannel channel;
 
-  ApiClient() {
-    _dio = Dio(
-      BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ),
-    );
+  factory ApiClient() {
+    return _instance;
+  }
 
-    // Interceptor para logs e autenticação (JWT Firebase)
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          // TODO: Pegar token do Firebase Auth e injetar no header
-          // options.headers['Authorization'] = 'Bearer $token';
-          return handler.next(options);
-        },
-        onError: (DioException e, handler) {
-          // Tratar erros globais (401, 500, etc)
-          return handler.next(e);
-        },
+  ApiClient._internal() {
+    // Para Emulador Android use 10.0.2.2
+    // Para iOS/Web use localhost
+    // Para Device Físico use o IP da sua máquina
+    const baseUrl = '10.0.2.2'; 
+    const port = 8080;
+
+    channel = ClientChannel(
+      baseUrl,
+      port: port,
+      options: const ChannelOptions(
+        credentials: ChannelCredentials.insecure(),
       ),
     );
   }
 
-  Dio get dio => _dio;
+  Future<void> shutdown() async {
+    await channel.shutdown();
+  }
 }

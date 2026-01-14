@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile_app/app.dart';
-import 'package:mobile_app/core/utils/injection_container.dart' as di;
+import 'package:parkingzero/app.dart';
+import 'package:parkingzero/core/utils/injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,5 +21,5 @@ void main() async {
   // Inicialização de dependências
   await di.initDependencies();
 
-  runApp(const FronteiraParkingApp());
+  runApp(const ParkingZeroApp());
 }

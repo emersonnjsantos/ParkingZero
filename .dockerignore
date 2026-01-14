@@ -1,0 +1,15 @@
+.git
+.gitignore
+*.md
+README*
+.env*
+.env.local
+vendor/
+tmp/
+*.test
+*.out
+mobile-app/
+tools/
+protos/
+deploy/
+migrations/

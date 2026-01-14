@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile_app/core/constants/app_constants.dart';
-import 'package:mobile_app/features/home/presentation/screens/home_screen.dart';
+import 'package:parkingzero/core/constants/app_constants.dart';
+import 'package:parkingzero/features/home/presentation/screens/home_screen.dart';
 
 class OnboardingLocationScreen extends StatelessWidget {
   const OnboardingLocationScreen({super.key});

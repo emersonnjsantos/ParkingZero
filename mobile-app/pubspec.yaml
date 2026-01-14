@@ -1,5 +1,5 @@
-name: mobile_app
-description: "Fronteira Parking - App de carteira, cashback e estacionamento."
+name: parkingzero
+description: "ParkingZero - App de carteira, cashback e estacionamento."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -32,6 +32,9 @@ dependencies:
   google_fonts: ^6.2.0
   flutter_svg: ^2.0.0
   font_awesome_flutter: ^10.7.0
+  sizer: ^3.0.1
+  grpc: ^5.1.0
+  protobuf: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -43,3 +46,4 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/logos/

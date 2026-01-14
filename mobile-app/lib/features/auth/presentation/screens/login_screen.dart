@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mobile_app/core/utils/injection_container.dart';
-import 'package:mobile_app/core/constants/app_constants.dart';
-import 'package:mobile_app/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:mobile_app/features/map_search/presentation/screens/map_screen.dart';
+import 'package:parkingzero/core/utils/injection_container.dart';
+import 'package:parkingzero/core/constants/app_constants.dart';
+import 'package:parkingzero/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:parkingzero/features/map_search/presentation/screens/map_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Fronteira Parking',
+                    'ParkingZero',
                     style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
