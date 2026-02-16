@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package payment;
+
+option go_package = "github.com/emersonnjsantos/ParkingZero/pkg/paymentpb";
+
+import "common/types.proto";
+
+// PaymentService — Sistema de patrocínio de lojas, vouchers e saída
+service PaymentService {
+  rpc RequestSponsorship (SponsorshipRequest) returns (SponsorshipResponse);
+  rpc GetVoucherStatus (GetVoucherStatusRequest) returns (VoucherStatus);
+  rpc VerifyExit (VerifyExitRequest) returns (VerifyExitResponse);
+  rpc ConfirmExit (ConfirmExitRequest) returns (ConfirmExitResponse);
+  rpc GetSponsorshipLedger (GetSponsorshipLedgerRequest) returns (SponsorshipLedgerResponse);
+  rpc RegisterUsedVoucher (RegisterUsedVoucherRequest) returns (RegisterUsedVoucherResponse);
+}
+
+// === Sponsorship ===
+
+message SponsorshipRequest {
+  string reservation_id = 1;
+  string store_id = 2;
+  InvoiceInfo invoice = 3;
+  string sync_id = 4;
+  double amount_to_sponsor = 5;
+}
+
+message InvoiceInfo {
+  string invoice_id = 1;
+  double amount_usd = 2;
+  int64 timestamp = 3;
+  string store_name = 4;
+}
+
+message SponsorshipResponse {
+  bool success = 1;
+  string message = 2;
+  common.TicketStatus new_status = 3;
+  string error_code = 4;
+  string ledger_entry_id = 5;
+  double amount_sponsored = 6;
+  double current_balance = 7;
+  double total_sponsored = 8;
+  double exchange_rate = 9;
+  common.SignedVoucher voucher = 10;
+}
+
+// === Voucher Status ===
+
+message GetVoucherStatusRequest {
+  string reservation_id = 1;
+}
+
+message VoucherStatus {
+  string reservation_id = 1;
+  common.TicketStatus status = 2;
+  string payer_id = 3;
+  string payer_name = 4;
+  double original_price = 5;
+  double amount_to_pay = 6;
+  double current_balance = 7;
+  double total_sponsored = 8;
+  repeated common.SponsorSummary sponsors_summary = 9;
+  common.SignedVoucher voucher = 10;
+}
+
+// === Exit Verification ===
+
+message VerifyExitRequest {
+  string garage_id = 1;
+  string vehicle_plate = 2;
+}
+
+message VerifyExitResponse {
+  bool authorized = 1;
+  string message = 2;
+  string display_message = 3;
+  common.TicketStatus status = 4;
+  string payer_name = 5;
+  string action_required = 6;
+  double amount_due = 7;
+}
+
+message ConfirmExitRequest {
+  string garage_id = 1;
+  string vehicle_plate = 2;
+  string agent_id = 3;
+}
+
+message ConfirmExitResponse {
+  bool success = 1;
+  string message = 2;
+  common.TicketStatus final_status = 3;
+}
+
+// === Sponsorship Ledger ===
+
+message SponsorshipLedgerEntry {
+  string entry_id = 1;
+  string store_id = 2;
+  string store_name = 3;
+  double amount = 4;
+  string invoice_id = 5;
+  int64 timestamp = 6;
+  string sync_id = 7;
+  double exchange_rate = 8;
+  string operator_id = 9;
+}
+
+message GetSponsorshipLedgerRequest {
+  string reservation_id = 1;
+}
+
+message SponsorshipLedgerResponse {
+  string reservation_id = 1;
+  double original_price = 2;
+  double current_balance = 3;
+  double total_sponsored = 4;
+  common.TicketStatus status = 5;
+  repeated SponsorshipLedgerEntry entries = 6;
+  common.SignedVoucher voucher = 7;
+  int32 entry_count = 8;
+}
+
+// === Voucher Anti-Fraude ===
+
+message ValidateVoucherOfflineRequest {
+  string signed_voucher_jwt = 1;
+  string garage_id = 2;
+}
+
+message ValidateVoucherOfflineResponse {
+  bool valid = 1;
+  string vehicle_plate = 2;
+  string garage_id = 3;
+  int64 expires_at = 4;
+  string jti = 5;
+  string error_message = 6;
+  repeated common.SponsorSummary sponsors = 7;
+}
+
+message RegisterUsedVoucherRequest {
+  string jti = 1;
+  string reservation_id = 2;
+  string garage_id = 3;
+  string agent_id = 4;
+  int64 used_at = 5;
+  string vehicle_plate = 6;
+  string sync_id = 7;
+}
+
+message RegisterUsedVoucherResponse {
+  bool success = 1;
+  string message = 2;
+  string error_code = 3;
+  int64 used_at = 4;
+  string used_by_garage = 5;
+}

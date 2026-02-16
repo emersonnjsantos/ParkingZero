@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/emersonnjsantos/ParkingZero/pkg/authpb";
+
+// AuthService — Cadastro, login e gestão de usuários/parceiros
+service AuthService {
+  // Registro de novos usuários
+  rpc RegisterUser (RegisterUserRequest) returns (RegisterUserResponse);
+
+  // Registro de parceiros (loja ou estacionamento)
+  rpc RegisterPartner (RegisterPartnerRequest) returns (RegisterPartnerResponse);
+
+  // Obter perfil do usuário/parceiro
+  rpc GetProfile (GetProfileRequest) returns (UserProfile);
+
+  // Atualizar perfil
+  rpc UpdateProfile (UpdateProfileRequest) returns (UserProfile);
+
+  // Listar funcionários de um parceiro
+  rpc ListPartnerStaff (ListPartnerStaffRequest) returns (ListPartnerStaffResponse);
+
+  // Adicionar funcionário a um parceiro
+  rpc AddPartnerStaff (AddPartnerStaffRequest) returns (AddPartnerStaffResponse);
+
+  // Remover funcionário
+  rpc RemovePartnerStaff (RemovePartnerStaffRequest) returns (RemovePartnerStaffResponse);
+}
+
+// === Enums ===
+
+enum UserRole {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_USER = 1;
+  ROLE_PARTNER_STORE = 2;
+  ROLE_PARTNER_PARKING = 3;
+  ROLE_ADMIN = 4;
+}
+
+enum PartnerType {
+  PARTNER_TYPE_UNSPECIFIED = 0;
+  PARKING_GARAGE = 1;
+  RETAIL_STORE = 2;
+}
+
+// === Registration ===
+
+message RegisterUserRequest {
+  string firebase_uid = 1;
+  string email = 2;
+  string display_name = 3;
+  string phone = 4;
+}
+
+message RegisterUserResponse {
+  bool success = 1;
+  string message = 2;
+  UserProfile profile = 3;
+}
+
+message RegisterPartnerRequest {
+  string firebase_uid = 1;
+  string email = 2;
+  string business_name = 3;
+  string cnpj = 4;
+  string phone = 5;
+  string address = 6;
+  PartnerType partner_type = 7;
+  double latitude = 8;
+  double longitude = 9;
+}
+
+message RegisterPartnerResponse {
+  bool success = 1;
+  string message = 2;
+  string partner_id = 3;
+  UserProfile profile = 4;
+}
+
+// === Profile ===
+
+message GetProfileRequest {
+  string user_id = 1;
+}
+
+message UpdateProfileRequest {
+  string user_id = 1;
+  string display_name = 2;
+  string phone = 3;
+  string avatar_url = 4;
+}
+
+message UserProfile {
+  string user_id = 1;
+  string email = 2;
+  string display_name = 3;
+  string phone = 4;
+  string avatar_url = 5;
+  UserRole role = 6;
+  string partner_id = 7;
+  string partner_name = 8;
+  int64 created_at = 9;
+  int64 last_login = 10;
+}
+
+// === Partner Staff ===
+
+message ListPartnerStaffRequest {
+  string partner_id = 1;
+}
+
+message ListPartnerStaffResponse {
+  repeated UserProfile staff = 1;
+}
+
+message AddPartnerStaffRequest {
+  string partner_id = 1;
+  string staff_email = 2;
+  string staff_name = 3;
+  UserRole role = 4;
+}
+
+message AddPartnerStaffResponse {
+  bool success = 1;
+  string message = 2;
+  string staff_id = 3;
+}
+
+message RemovePartnerStaffRequest {
+  string partner_id = 1;
+  string staff_id = 2;
+}
+
+message RemovePartnerStaffResponse {
+  bool success = 1;
+  string message = 2;
+}

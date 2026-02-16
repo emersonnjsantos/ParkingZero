@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRS - ParkingZero | ISO/IEC/IEEE 29148:2018</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #10b981;
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --bg-table: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #475569;
+            --accent: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 3rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        header p { opacity: 0.9; font-size: 1.1rem; }
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+        nav {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            position: sticky;
+            top: 1rem;
+            z-index: 100;
+        }
+        nav h3 { margin-bottom: 1rem; color: var(--accent); }
+        nav ul { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; }
+        nav a {
+            color: var(--text);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            background: var(--bg-table);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        nav a:hover { background: var(--primary); }
+        section {
+            background: var(--bg-card);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        h2 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        h3 { color: var(--secondary); margin: 1.5rem 0 1rem; }
+        h4 { color: var(--accent); margin: 1rem 0 0.5rem; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+        th { background: var(--bg-table); color: var(--accent); }
+        tr:nth-child(even) { background: rgba(51, 65, 85, 0.5); }
+        .req-card {
+            background: var(--bg-table);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--primary);
+        }
+        .req-card.essential { border-left-color: var(--secondary); }
+        .req-id {
+            font-family: monospace;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+        }
+        .priority {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .priority.essential { background: var(--secondary); }
+        .priority.desirable { background: var(--accent); color: #000; }
+        pre {
+            background: #0d1117;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+        code { font-family: 'Consolas', monospace; }
+        .diagram {
+            background: #0d1117;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, var(--bg-table), var(--bg));
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-card .number { font-size: 2.5rem; font-weight: 700; color: var(--primary); }
+        .stat-card .label { color: var(--text-muted); }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            header { padding: 2rem 1rem; }
+            header h1 { font-size: 1.8rem; }
+            nav ul { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Software Requirements Specification</h1>
+            <p>ParkingZero - Sistema de Estacionamento Inteligente</p>
+            <span class="badge">ISO/IEC/IEEE 29148:2018</span>
+        </header>
+
+        <nav>
+            <h3>📑 Navegação</h3>
+            <ul>
+                <li><a href="#intro">1. Introdução</a></li>
+                <li><a href="#descricao">2. Descrição Geral</a></li>
+                <li><a href="#funcionais">3. Req. Funcionais</a></li>
+                <li><a href="#nao-funcionais">4. Req. Não-Funcionais</a></li>
+                <li><a href="#interface">5. Interfaces</a></li>
+                <li><a href="#verificacao">6. Verificação</a></li>
+                <li><a href="#modelo">Apêndice A: Modelo</a></li>
+            </ul>
+        </nav>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number">15</div>
+                <div class="label">Requisitos Funcionais</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">12</div>
+                <div class="label">Req. Não-Funcionais</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">6</div>
+                <div class="label">Interfaces</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">12</div>
+                <div class="label">Serviços gRPC</div>
+            </div>
+        </div>
+
+        <section id="intro">
+            <h2>1. INTRODUÇÃO</h2>
+            
+            <h3>1.1 Propósito</h3>
+            <p>Este documento especifica os requisitos de software para o sistema <strong>ParkingZero</strong>, uma plataforma de estacionamento inteligente com sistema de patrocínio (cashback) de lojas parceiras.</p>
+
+            <h3>1.2 Escopo</h3>
+            <table>
+                <tr><th>Componente</th><th>Tecnologia</th><th>Descrição</th></tr>
+                <tr><td>Backend API</td><td>Go/gRPC</td><td>Servidor com persistência híbrida</td></tr>
+                <tr><td>Mobile App</td><td>Flutter/Dart</td><td>Aplicativo multiplataforma</td></tr>
+                <tr><td>Cloud</td><td>Firebase/GCP</td><td>Infraestrutura cloud</td></tr>
+            </table>
+
+            <h3>1.3 Definições e Acrônimos</h3>
+            <table>
+                <tr><th>Termo</th><th>Definição</th></tr>
+                <tr><td><strong>B+Tree</strong></td><td>Estrutura de árvore balanceada para armazenamento local</td></tr>
+                <tr><td><strong>Circuit Breaker</strong></td><td>Padrão de resiliência que interrompe chamadas a serviços falhos</td></tr>
+                <tr><td><strong>JWT</strong></td><td>JSON Web Token - token de autenticação assinado</td></tr>
+                <tr><td><strong>Ledger</strong></td><td>Registro contábil de transações de patrocínio</td></tr>
+                <tr><td><strong>RBAC</strong></td><td>Role-Based Access Control</td></tr>
+                <tr><td><strong>Voucher</strong></td><td>Comprovante digital de estacionamento patrocinado</td></tr>
+            </table>
+        </section>
+
+        <section id="descricao">
+            <h2>2. DESCRIÇÃO GERAL</h2>
+
+            <h3>2.1 Perspectiva do Produto</h3>
+            <div class="diagram">
+┌─────────────────────────────────────────────────────────────────┐
+│                    ECOSSISTEMA PARKINGZERO                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌───────────────┐    ┌───────────────┐    ┌───────────────┐   │
+│  │   USUÁRIO     │    │    LOJA       │    │ ESTACIONAMENTO│   │
+│  │   (App)       │    │  (Parceiro)   │    │   (Guarita)   │   │
+│  └───────┬───────┘    └───────┬───────┘    └───────┬───────┘   │
+│          └────────────────────┼────────────────────┘           │
+│                               │                                │
+│                     ┌─────────▼─────────┐                      │
+│                     │   BACKEND API     │                      │
+│                     │   (Go/gRPC)       │                      │
+│                     └─────────┬─────────┘                      │
+│              ┌────────────────┼────────────────┐               │
+│     ┌────────▼────────┐ ┌─────▼─────┐ ┌───────▼───────┐       │
+│     │   Firestore     │ │  B+Tree   │ │    Firebase   │       │
+│     │   (Cloud)       │ │  (Local)  │ │    Auth/FCM   │       │
+│     └─────────────────┘ └───────────┘ └───────────────┘       │
+└─────────────────────────────────────────────────────────────────┘
+            </div>
+
+            <h3>2.2 Características do Usuário</h3>
+            <table>
+                <tr><th>Classe</th><th>Descrição</th><th>Nível</th></tr>
+                <tr><td>Usuário Final</td><td>Cliente que estaciona</td><td>Básico</td></tr>
+                <tr><td>Operador de Loja</td><td>Processa patrocínios</td><td>Intermediário</td></tr>
+                <tr><td>Guarda</td><td>Valida saídas</td><td>Básico</td></tr>
+                <tr><td>Administrador</td><td>Gerencia sistema</td><td>Avançado</td></tr>
+            </table>
+        </section>
+
+        <section id="funcionais">
+            <h2>3. REQUISITOS FUNCIONAIS</h2>
+
+            <h3>3.1 Módulo: Busca de Garagens</h3>
+            
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-001</span> Buscar Garagens por Localização <span class="priority essential">Essencial</span></h4>
+                <table>
+                    <tr><th>Atributo</th><th>Valor</th></tr>
+                    <tr><td><strong>Descrição</strong></td><td>Buscar garagens próximas a uma coordenada geográfica dentro de um raio</td></tr>
+                    <tr><td><strong>Entrada</strong></td><td>Latitude, Longitude, Raio (metros)</td></tr>
+                    <tr><td><strong>Saída</strong></td><td>Lista de objetos Garage ordenados por distância</td></tr>
+                    <tr><td><strong>Regra</strong></td><td>RN-001: Raio máximo de 10.000 metros</td></tr>
+                </table>
+            </div>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-002</span> Obter Detalhes da Garagem <span class="priority essential">Essencial</span></h4>
+                <table>
+                    <tr><th>Atributo</th><th>Valor</th></tr>
+                    <tr><td><strong>Descrição</strong></td><td>Retornar informações detalhadas de uma garagem específica</td></tr>
+                    <tr><td><strong>Entrada</strong></td><td>garage_id (string)</td></tr>
+                    <tr><td><strong>Saída</strong></td><td>name, base_price, latitude, longitude, address, amenities[], campaigns[]</td></tr>
+                </table>
+            </div>
+
+            <h3>3.2 Módulo: Sistema de Reservas</h3>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-003</span> Criar Reserva <span class="priority essential">Essencial</span></h4>
+                <table>
+                    <tr><th>Atributo</th><th>Valor</th></tr>
+                    <tr><td><strong>Descrição</strong></td><td>Criar uma reserva de vaga com período definido</td></tr>
+                    <tr><td><strong>Entrada</strong></td><td>user_id, garage_id, start_time, end_time, vehicle_plate</td></tr>
+                    <tr><td><strong>Saída</strong></td><td>Objeto Reservation com ID gerado e status PENDING</td></tr>
+                    <tr><td><strong>Regras</strong></td><td>RN-002: Período mínimo 30min; RN-003: Máx 3 reservas ativas</td></tr>
+                </table>
+            </div>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-004</span> Listar Reservas <span class="priority essential">Essencial</span></h4>
+                <p>Listar todas as reservas de um usuário, opcionalmente filtradas por status.</p>
+            </div>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-005</span> Cancelar Reserva <span class="priority essential">Essencial</span></h4>
+                <p>Cancelar uma reserva existente (RN-004: Só próprias; RN-005: Não se COMPLETED).</p>
+            </div>
+
+            <h3>3.3 Módulo: Entrada/Saída de Veículos</h3>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-006</span> Registrar Entrada de Veículo <span class="priority essential">Essencial</span></h4>
+                <table>
+                    <tr><th>Atributo</th><th>Valor</th></tr>
+                    <tr><td><strong>Descrição</strong></td><td>Registrar entrada com latência &lt; 10ms usando B+Tree local</td></tr>
+                    <tr><td><strong>Entrada</strong></td><td>garage_id, vehicle_plate, entry_time, user_id (opcional)</td></tr>
+                    <tr><td><strong>Saída</strong></td><td>entry_id, success, message, entry_time</td></tr>
+                    <tr><td><strong>Performance</strong></td><td>P99 &lt; 10ms</td></tr>
+                </table>
+            </div>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-007</span> Registrar Saída de Veículo <span class="priority essential">Essencial</span></h4>
+                <p>Registrar saída e calcular valor baseado no tempo de permanência.</p>
+            </div>
+
+            <div class="req-card">
+                <h4><span class="req-id">REQ-FUNC-008</span> Listar Veículos Ativos <span class="priority desirable">Desejável</span></h4>
+                <p>Listar todos os veículos atualmente estacionados em uma garagem.</p>
+            </div>
+
+            <h3>3.4 Módulo: Sistema de Patrocínio</h3>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-009</span> Solicitar Patrocínio <span class="priority essential">Essencial</span></h4>
+                <table>
+                    <tr><th>Atributo</th><th>Valor</th></tr>
+                    <tr><td><strong>Descrição</strong></td><td>Lojas patrocinem estacionamento mediante validação de nota fiscal</td></tr>
+                    <tr><td><strong>Entrada</strong></td><td>reservation_id, store_id, invoice, sync_id, amount_to_sponsor</td></tr>
+                    <tr><td><strong>Saída</strong></td><td>success, ledger_entry_id, amount_sponsored, current_balance, voucher</td></tr>
+                    <tr><td><strong>Regras</strong></td><td>RN-009: NF ≥ R$200; RN-010: NF única; RN-011: Multi-sponsor</td></tr>
+                </table>
+            </div>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-010</span> Consultar Status do Voucher <span class="priority essential">Essencial</span></h4>
+                <p>Retornar status atual de patrocínio de uma reserva.</p>
+            </div>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-011</span> Verificar Permissão de Saída <span class="priority essential">Essencial</span></h4>
+                <p>Verificar se veículo pode sair (patrocinado ou pagamento necessário).</p>
+            </div>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-012</span> Confirmar Saída Física <span class="priority essential">Essencial</span></h4>
+                <p>Registrar saída física confirmada pelo guarda.</p>
+            </div>
+
+            <h3>3.5 Módulo: Voucher Offline</h3>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-013</span> Gerar Voucher JWT <span class="priority essential">Essencial</span></h4>
+                <table>
+                    <tr><th>Atributo</th><th>Valor</th></tr>
+                    <tr><td><strong>Descrição</strong></td><td>Gerar voucher JWT assinado quando saldo = 0</td></tr>
+                    <tr><td><strong>Algoritmo</strong></td><td>Assinatura Ed25519</td></tr>
+                    <tr><td><strong>Validade</strong></td><td>60 minutos</td></tr>
+                </table>
+            </div>
+
+            <div class="req-card essential">
+                <h4><span class="req-id">REQ-FUNC-014</span> Registrar Voucher Usado <span class="priority essential">Essencial</span></h4>
+                <p>Registrar uso de voucher para prevenir reutilização (anti-fraude).</p>
+            </div>
+
+            <div class="req-card">
+                <h4><span class="req-id">REQ-FUNC-015</span> Consultar Ledger de Patrocínios <span class="priority desirable">Desejável</span></h4>
+                <p>Retornar histórico completo de patrocínios de uma reserva.</p>
+            </div>
+        </section>
+
+        <section id="nao-funcionais">
+            <h2>4. REQUISITOS NÃO-FUNCIONAIS</h2>
+
+            <h3>4.1 Performance</h3>
+            <table>
+                <tr><th>ID</th><th>Requisito</th><th>Métrica</th></tr>
+                <tr><td>REQ-NFR-001</td><td>Latência Crítica</td><td>P99 &lt; 10ms para entrada/saída</td></tr>
+                <tr><td>REQ-NFR-002</td><td>Throughput</td><td>&gt; 100 TPS sustentado</td></tr>
+            </table>
+
+            <h3>4.2 Disponibilidade</h3>
+            <table>
+                <tr><th>ID</th><th>Requisito</th><th>Métrica</th></tr>
+                <tr><td>REQ-NFR-003</td><td>Alta Disponibilidade</td><td>99.9% uptime</td></tr>
+                <tr><td>REQ-NFR-004</td><td>Operação Offline</td><td>Validação JWT sem internet</td></tr>
+            </table>
+
+            <h3>4.3 Resiliência</h3>
+            <table>
+                <tr><th>ID</th><th>Requisito</th><th>Método</th></tr>
+                <tr><td>REQ-NFR-005</td><td>Circuit Breaker</td><td>CLOSED → OPEN (5 falhas) → HALF_OPEN</td></tr>
+                <tr><td>REQ-NFR-006</td><td>Dead Letter Queue</td><td>Arquivo JSON /data/dlq.json</td></tr>
+                <tr><td>REQ-NFR-007</td><td>Graceful Shutdown</td><td>Finalizar operações pendentes</td></tr>
+            </table>
+
+            <h3>4.4 Segurança</h3>
+            <table>
+                <tr><th>ID</th><th>Requisito</th><th>Método</th></tr>
+                <tr><td>REQ-NFR-008</td><td>Autenticação</td><td>Firebase Auth + Bearer Token</td></tr>
+                <tr><td>REQ-NFR-009</td><td>RBAC</td><td>USER, PARTNER_STORE, PARTNER_PARKING, ADMIN</td></tr>
+                <tr><td>REQ-NFR-010</td><td>Idempotência</td><td>sync_id UUID único</td></tr>
+            </table>
+
+            <h3>4.5 Manutenibilidade</h3>
+            <table>
+                <tr><th>ID</th><th>Requisito</th><th>Especificação</th></tr>
+                <tr><td>REQ-NFR-011</td><td>Logs Estruturados</td><td>JSON com timestamp, level, message</td></tr>
+                <tr><td>REQ-NFR-012</td><td>Health Checks</td><td>/health e /ready na porta 8081</td></tr>
+            </table>
+        </section>
+
+        <section id="interface">
+            <h2>5. REQUISITOS DE INTERFACE</h2>
+
+            <h3>5.1 Interfaces de Usuário</h3>
+            <table>
+                <tr><th>ID</th><th>Interface</th><th>Plataformas</th></tr>
+                <tr><td>REQ-INT-001</td><td>App Mobile Flutter</td><td>Android 8.0+, iOS 14.0+</td></tr>
+            </table>
+
+            <h3>5.2 Interfaces de Hardware</h3>
+            <table>
+                <tr><th>ID</th><th>Interface</th><th>Uso</th></tr>
+                <tr><td>REQ-INT-002</td><td>GPS</td><td>Busca de garagens</td></tr>
+                <tr><td>REQ-INT-003</td><td>Câmera</td><td>Escaneamento QR Code</td></tr>
+            </table>
+
+            <h3>5.3 Interfaces de Software</h3>
+            <table>
+                <tr><th>ID</th><th>Interface</th><th>Serviços</th></tr>
+                <tr><td>REQ-INT-004</td><td>Firebase</td><td>Auth, Firestore, FCM</td></tr>
+                <tr><td>REQ-INT-005</td><td>Google Maps</td><td>Mapas, marcadores, navegação</td></tr>
+            </table>
+
+            <h3>5.4 Interfaces de Comunicação</h3>
+            <table>
+                <tr><th>ID</th><th>Protocolo</th><th>Especificação</th></tr>
+                <tr><td>REQ-INT-006</td><td>gRPC</td><td>Porta 8080, Protobuf v3, TLS 1.3</td></tr>
+            </table>
+        </section>
+
+        <section id="verificacao">
+            <h2>6. VERIFICAÇÃO</h2>
+
+            <h3>6.1 Critérios de Aceitação</h3>
+            <table>
+                <tr><th>Requisito</th><th>Critério</th><th>Método</th></tr>
+                <tr><td>REQ-FUNC-001</td><td>Retorna garagens dentro do raio</td><td>Teste automatizado</td></tr>
+                <tr><td>REQ-FUNC-006</td><td>Latência &lt; 10ms em P99</td><td>Teste de carga</td></tr>
+                <tr><td>REQ-FUNC-009</td><td>NF &lt; R$200 rejeitada</td><td>Teste unitário</td></tr>
+                <tr><td>REQ-FUNC-013</td><td>Voucher válido por 60min</td><td>Teste unitário</td></tr>
+                <tr><td>REQ-NFR-004</td><td>Validação sem internet</td><td>Teste manual</td></tr>
+                <tr><td>REQ-NFR-005</td><td>Circuit Breaker abre após 5 falhas</td><td>Teste integração</td></tr>
+            </table>
+
+            <h3>6.2 Matriz de Rastreabilidade</h3>
+            <table>
+                <tr><th>Requisito</th><th>Origem</th><th>Implementação</th></tr>
+                <tr><td>REQ-FUNC-001</td><td>Stakeholder</td><td>parking.go:SearchGarages</td></tr>
+                <tr><td>REQ-FUNC-006</td><td>Stakeholder</td><td>vehicle.go:RecordVehicleEntry</td></tr>
+                <tr><td>REQ-FUNC-009</td><td>Regra Negócio</td><td>sponsorship.go:RequestSponsorship</td></tr>
+                <tr><td>REQ-FUNC-013</td><td>REQ-FUNC-009</td><td>voucher.go:GenerateVoucher</td></tr>
+                <tr><td>REQ-NFR-001</td><td>Arquitetura</td><td>database/btree.go</td></tr>
+                <tr><td>REQ-NFR-005</td><td>Arquitetura</td><td>sync_worker.go</td></tr>
+                <tr><td>REQ-NFR-009</td><td>Segurança</td><td>auth/rbac.go</td></tr>
+            </table>
+        </section>
+
+        <section id="modelo">
+            <h2>APÊNDICE A: Modelo de Dados</h2>
+
+            <h3>A.1 Coleções Firestore</h3>
+            <div class="diagram">
+garages/                          reservations/
+  {garage_id}/                      {reservation_id}/
+    - name                            - user_id
+    - base_price                      - garage_id
+    - latitude, longitude             - vehicle_plate
+    - geohash                         - status
+    - amenities[]                     - current_balance
+    - campaigns/                      - sponsorship_ledger/
+                                          {entry_id}/
+users/                                      - store_id
+  {user_id}/                                - amount
+    - email                                 - invoice_id
+    - role
+    - partner_id              vehicle_entries/
+                                {garage_id|plate}/
+used_vouchers/                    - entry_time
+  {jti}/                          - exit_time
+    - reservation_id              - status
+    - used_at                     - amount_paid
+    - agent_id
+            </div>
+        </section>
+
+        <footer>
+            <p><strong>ParkingZero SRS v1.0</strong> | Documento conforme ISO/IEC/IEEE 29148:2018</p>
+            <p>Gerado em: 30 de Janeiro de 2026</p>
+        </footer>
+    </div>
+</body>
+</html>

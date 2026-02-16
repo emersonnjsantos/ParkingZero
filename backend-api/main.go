@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/emersonnjsantos/ParkingZero/backend-api/internal/auth"
 	"github.com/emersonnjsantos/ParkingZero/backend-api/internal/database"
 	"github.com/emersonnjsantos/ParkingZero/backend-api/internal/service"
 	pb "github.com/emersonnjsantos/ParkingZero/pkg/pb"
@@ -60,6 +61,12 @@ func main() {
 	vehicleService := service.NewVehicleService(localDB, firestoreClient)
 	parkingService := service.NewParkingService(firestoreClient, vehicleService)
 
+	// PaymentService (Sistema de Patrocínio de Lojas)
+	paymentService, err := service.NewPaymentService(firestoreClient, app)
+	if err != nil {
+		log.Printf("⚠️  PaymentService inicializado sem FCM: %v", err)
+	}
+
 	// 4. Iniciar Sync Worker em goroutine
 	syncWorker := service.NewSyncWorker(localDB, firestoreClient, vehicleService.GetSyncQueue())
 	syncCtx, syncCancel := context.WithCancel(ctx)
@@ -105,10 +112,14 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	// 8. Configurar servidor gRPC com AuthInterceptor (RBAC)
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(auth.AuthInterceptor(firestoreClient)),
+	)
 
 	// 6. Registrar serviços gRPC
 	pb.RegisterParkingServiceServer(grpcServer, parkingService)
+	pb.RegisterPaymentServiceServer(grpcServer, paymentService)
 
 	// NOTA: VehicleService precisa ser registrado quando o protoc gerar o código
 	// pb.RegisterVehicleServiceServer(grpcServer, vehicleService)
@@ -141,6 +152,7 @@ func main() {
 	log.Printf("🚀 Servidor gRPC rodando em %v\n", lis.Addr())
 	log.Println("📊 Serviços disponíveis:")
 	log.Println("   - ParkingService (Firestore)")
+	log.Println("   - PaymentService (Sponsorship/FCM)")
 	log.Println("   - VehicleService (B+Tree Local) [aguardando protoc]")
 	log.Println("   - Sync Worker (Background)")
 

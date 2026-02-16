@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/emersonnjsantos/ParkingZero/pkg/commonpb";
+
+// === Enums Compartilhados ===
+
+enum ReservationStatus {
+  RESERVATION_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  ACTIVE = 2;
+  COMPLETED = 3;
+  CANCELLED = 4;
+}
+
+enum VehicleStatus {
+  VEHICLE_STATUS_UNSPECIFIED = 0;
+  PARKED = 1;
+  EXITED = 2;
+}
+
+enum TicketStatus {
+  TICKET_STATUS_UNSPECIFIED = 0;
+  TICKET_CREATED = 1;
+  TICKET_PARTIALLY_SPONSORED = 2;
+  TICKET_SPONSORED = 3;
+  TICKET_COMPLETED = 4;
+}
+
+// === Messages Compartilhadas ===
+
+message Campaign {
+  string partner_name = 1;
+  string discount_rule = 2;
+}
+
+message SponsorSummary {
+  string store_name = 1;
+  double amount = 2;
+}
+
+message SignedVoucher {
+  string jwt = 1;
+  string jti = 2;
+  int64 expires_at = 3;
+  string qr_code_data = 4;
+}

@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package vehicle;
+
+option go_package = "github.com/emersonnjsantos/ParkingZero/pkg/vehiclepb";
+
+import "common/types.proto";
+
+// VehicleService — Entrada/saída de veículos com latência crítica (B+Tree local)
+service VehicleService {
+  rpc RecordVehicleEntry (VehicleEntryRequest) returns (VehicleEntryResponse);
+  rpc RecordVehicleExit (VehicleExitRequest) returns (VehicleExitResponse);
+  rpc GetActiveVehicles (GetActiveVehiclesRequest) returns (GetActiveVehiclesResponse);
+  rpc GetVehicleEntry (GetVehicleEntryRequest) returns (VehicleEntry);
+}
+
+// === Messages ===
+
+message VehicleEntryRequest {
+  string garage_id = 1;
+  string vehicle_plate = 2;
+  int64 entry_time = 3;
+  string user_id = 4;
+}
+
+message VehicleEntryResponse {
+  string entry_id = 1;
+  bool success = 2;
+  string message = 3;
+  int64 entry_time = 4;
+}
+
+message VehicleExitRequest {
+  string garage_id = 1;
+  string vehicle_plate = 2;
+  int64 exit_time = 3;
+}
+
+message VehicleExitResponse {
+  string entry_id = 1;
+  double total_amount = 2;
+  int64 duration_seconds = 3;
+  int64 entry_time = 4;
+  int64 exit_time = 5;
+  bool success = 6;
+  string message = 7;
+}
+
+message VehicleEntry {
+  string id = 1;
+  string garage_id = 2;
+  string vehicle_plate = 3;
+  int64 entry_time = 4;
+  int64 exit_time = 5;
+  double amount_paid = 6;
+  common.VehicleStatus status = 7;
+  string user_id = 8;
+}
+
+message GetActiveVehiclesRequest {
+  string garage_id = 1;
+}
+
+message GetActiveVehiclesResponse {
+  repeated VehicleEntry vehicles = 1;
+  int32 total_active = 2;
+}
+
+message GetVehicleEntryRequest {
+  string garage_id = 1;
+  string vehicle_plate = 2;
+}

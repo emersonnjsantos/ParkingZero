@@ -3,6 +3,7 @@ module github.com/emersonnjsantos/ParkingZero/tools/seed
 go 1.25.3
 
 require (
+	cloud.google.com/go/firestore v1.20.0
 	firebase.google.com/go v3.13.0+incompatible
 	github.com/mmcloughlin/geohash v0.10.0
 )
@@ -13,7 +14,6 @@ require (
 	cloud.google.com/go/auth v0.16.4 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.8.0 // indirect
-	cloud.google.com/go/firestore v1.20.0 // indirect
 	cloud.google.com/go/iam v1.5.2 // indirect
 	cloud.google.com/go/longrunning v0.6.7 // indirect
 	cloud.google.com/go/monitoring v1.24.2 // indirect

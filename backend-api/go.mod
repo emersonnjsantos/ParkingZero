@@ -7,6 +7,8 @@ require (
 	firebase.google.com/go v3.13.0+incompatible
 	github.com/emersonnjsantos/ParkingZero/pkg v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/google/uuid v1.6.0
 	github.com/mmcloughlin/geohash v0.10.0
 	google.golang.org/api v0.247.0
 	google.golang.org/grpc v1.78.0
@@ -46,7 +48,6 @@ require (
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

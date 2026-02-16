@@ -3,4 +3,13 @@ go 1.25.3
 use (
 	./backend-api
 	./pkg
+	./load-tests/grpc
+	./shared
+	./services/api-gateway
+	./services/garage-svc
+	./services/vehicle-svc
+	./services/payment-svc
+	./services/auth-svc
+	./services/dashboard-svc
+	./tools/seed
 )

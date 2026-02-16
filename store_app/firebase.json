@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"parkingzero-app","appId":"1:621130922343:android:25aec0753d9987886017c2","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"parkingzero-app","configurations":{"android":"1:621130922343:android:25aec0753d9987886017c2","ios":"1:621130922343:ios:a67f742b939716176017c2"}}}}}}

@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-01-30T21:22:46.071Z",
+  "test_name": "ParkingZero Load Test",
+  "metrics": {
+    "total_requests": 19,
+    "failed_requests": 19,
+    "avg_duration": 32.18426315789473,
+    "p95_duration": 43.12848999999999,
+    "p99_duration": 0,
+    "rps": 3.242320819112628
+  },
+  "by_endpoint": {
+    "login": {
+      "attempts": 3,
+      "avg_duration": 33.39706666666667,
+      "success_rate": 0
+    },
+    "reservation": {
+      "created": 3,
+      "avg_duration": 28.358866666666668,
+      "success_rate": 0
+    },
+    "sponsorship": {
+      "requested": 0,
+      "avg_duration": 0,
+      "success_rate": 0
+    },
+    "exit": {
+      "verified": 0,
+      "avg_duration": 0,
+      "success_rate": 0
+    }
+  },
+  "thresholds": {}
+}

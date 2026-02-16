@@ -1,0 +1,2046 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>service: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/emersonnjsantos/ParkingZero/backend-api/internal/service/parking.go (0.0%)</option>
+				
+				<option value="file1">github.com/emersonnjsantos/ParkingZero/backend-api/internal/service/sponsorship.go (0.0%)</option>
+				
+				<option value="file2">github.com/emersonnjsantos/ParkingZero/backend-api/internal/service/sync_worker.go (0.0%)</option>
+				
+				<option value="file3">github.com/emersonnjsantos/ParkingZero/backend-api/internal/service/vehicle.go (43.2%)</option>
+				
+				<option value="file4">github.com/emersonnjsantos/ParkingZero/backend-api/internal/service/voucher.go (92.9%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package service
+
+import (
+        "context"
+        "math"
+        "time"
+
+        "cloud.google.com/go/firestore"
+        pb "github.com/emersonnjsantos/ParkingZero/pkg/pb"
+        "github.com/mmcloughlin/geohash"
+        "google.golang.org/api/iterator"
+        "google.golang.org/grpc/codes"
+        "google.golang.org/grpc/status"
+)
+
+type ParkingService struct {
+        pb.UnimplementedParkingServiceServer
+        firestoreClient *firestore.Client
+        vehicleService  *VehicleService // Delegação para operações de veículos
+}
+
+func NewParkingService(client *firestore.Client, vehicleService *VehicleService) *ParkingService <span class="cov0" title="0">{
+        return &amp;ParkingService{
+                firestoreClient: client,
+                vehicleService:  vehicleService,
+        }
+}</span>
+
+// ==================== Busca de Garagens ====================
+
+func (s *ParkingService) SearchGarages(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) <span class="cov0" title="0">{
+        userLat := req.GetLatitude()
+        userLng := req.GetLongitude()
+        hash := geohash.Encode(userLat, userLng)
+        searchHash := hash[:5]
+
+        iter := s.firestoreClient.Collection("garages").
+                Where("geohash", "&gt;=", searchHash).
+                Where("geohash", "&lt;", searchHash+"\uf8ff").
+                Documents(ctx)
+
+        var garages []*pb.Garage
+
+        for </span><span class="cov0" title="0">{
+                doc, err := iter.Next()
+                if err == iterator.Done </span><span class="cov0" title="0">{
+                        break</span>
+                }
+                <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                        return nil, status.Errorf(codes.Internal, "failed to iterate garages: %v", err)
+                }</span>
+
+                <span class="cov0" title="0">data := doc.Data()
+                gLat := getFloat64(data, "latitude")
+                gLng := getFloat64(data, "longitude")
+
+                if distance(userLat, userLng, gLat, gLng) &gt; float64(req.RadiusMeters) </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">garages = append(garages, docToGarage(doc))</span>
+        }
+
+        <span class="cov0" title="0">return &amp;pb.SearchResponse{Garages: garages}, nil</span>
+}
+
+func (s *ParkingService) GetGarage(ctx context.Context, req *pb.GetGarageRequest) (*pb.Garage, error) <span class="cov0" title="0">{
+        doc, err := s.firestoreClient.Collection("garages").Doc(req.GetGarageId()).Get(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                if status.Code(err) == codes.NotFound </span><span class="cov0" title="0">{
+                        return nil, status.Errorf(codes.NotFound, "garage not found: %s", req.GetGarageId())
+                }</span>
+                <span class="cov0" title="0">return nil, status.Errorf(codes.Internal, "failed to get garage: %v", err)</span>
+        }
+
+        <span class="cov0" title="0">return docToGarage(doc), nil</span>
+}
+
+// ==================== Sistema de Reservas ====================
+
+func (s *ParkingService) CreateReservation(ctx context.Context, req *pb.CreateReservationRequest) (*pb.Reservation, error) <span class="cov0" title="0">{
+        // Validações básicas
+        if req.GetUserId() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "user_id is required")
+        }</span>
+        <span class="cov0" title="0">if req.GetGarageId() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "garage_id is required")
+        }</span>
+        <span class="cov0" title="0">if req.GetStartTime() &gt;= req.GetEndTime() </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "start_time must be before end_time")
+        }</span>
+
+        // Buscar garagem para calcular preço
+        <span class="cov0" title="0">garageDoc, err := s.firestoreClient.Collection("garages").Doc(req.GetGarageId()).Get(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.NotFound, "garage not found: %s", req.GetGarageId())
+        }</span>
+        <span class="cov0" title="0">garageData := garageDoc.Data()
+        garageName := getString(garageData, "name")
+        basePrice := getFloat64(garageData, "base_price")
+
+        // Calcular preço total (basePrice por hora)
+        hours := float64(req.GetEndTime()-req.GetStartTime()) / 3600.0
+        totalPrice := basePrice * hours
+
+        // Criar documento de reserva
+        now := time.Now().Unix()
+        reservationRef := s.firestoreClient.Collection("reservations").NewDoc()
+
+        reservation := map[string]interface{}{
+                "user_id":       req.GetUserId(),
+                "garage_id":     req.GetGarageId(),
+                "garage_name":   garageName,
+                "start_time":    req.GetStartTime(),
+                "end_time":      req.GetEndTime(),
+                "vehicle_plate": req.GetVehiclePlate(),
+                "total_price":   totalPrice,
+                "status":        int32(pb.ReservationStatus_PENDING),
+                "created_at":    now,
+        }
+
+        _, err = reservationRef.Set(ctx, reservation)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "failed to create reservation: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;pb.Reservation{
+                Id:           reservationRef.ID,
+                UserId:       req.GetUserId(),
+                GarageId:     req.GetGarageId(),
+                GarageName:   garageName,
+                StartTime:    req.GetStartTime(),
+                EndTime:      req.GetEndTime(),
+                VehiclePlate: req.GetVehiclePlate(),
+                TotalPrice:   totalPrice,
+                Status:       pb.ReservationStatus_PENDING,
+                CreatedAt:    now,
+        }, nil</span>
+}
+
+func (s *ParkingService) ListReservations(ctx context.Context, req *pb.ListReservationsRequest) (*pb.ListReservationsResponse, error) <span class="cov0" title="0">{
+        if req.GetUserId() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "user_id is required")
+        }</span>
+
+        <span class="cov0" title="0">query := s.firestoreClient.Collection("reservations").Where("user_id", "==", req.GetUserId())
+
+        // Filtro opcional por status
+        if req.GetStatusFilter() != pb.ReservationStatus_RESERVATION_STATUS_UNSPECIFIED </span><span class="cov0" title="0">{
+                query = query.Where("status", "==", int32(req.GetStatusFilter()))
+        }</span>
+
+        <span class="cov0" title="0">iter := query.OrderBy("created_at", firestore.Desc).Documents(ctx)
+
+        var reservations []*pb.Reservation
+
+        for </span><span class="cov0" title="0">{
+                doc, err := iter.Next()
+                if err == iterator.Done </span><span class="cov0" title="0">{
+                        break</span>
+                }
+                <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                        return nil, status.Errorf(codes.Internal, "failed to list reservations: %v", err)
+                }</span>
+
+                <span class="cov0" title="0">reservations = append(reservations, docToReservation(doc))</span>
+        }
+
+        <span class="cov0" title="0">return &amp;pb.ListReservationsResponse{Reservations: reservations}, nil</span>
+}
+
+func (s *ParkingService) CancelReservation(ctx context.Context, req *pb.CancelReservationRequest) (*pb.CancelReservationResponse, error) <span class="cov0" title="0">{
+        if req.GetReservationId() == "" || req.GetUserId() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "reservation_id and user_id are required")
+        }</span>
+
+        <span class="cov0" title="0">docRef := s.firestoreClient.Collection("reservations").Doc(req.GetReservationId())
+        doc, err := docRef.Get(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.NotFound, "reservation not found")
+        }</span>
+
+        <span class="cov0" title="0">data := doc.Data()
+        if getString(data, "user_id") != req.GetUserId() </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.PermissionDenied, "you can only cancel your own reservations")
+        }</span>
+
+        <span class="cov0" title="0">currentStatus := pb.ReservationStatus(getInt32(data, "status"))
+        if currentStatus == pb.ReservationStatus_CANCELLED </span><span class="cov0" title="0">{
+                return &amp;pb.CancelReservationResponse{
+                        Success: false,
+                        Message: "Reservation is already cancelled",
+                }, nil
+        }</span>
+        <span class="cov0" title="0">if currentStatus == pb.ReservationStatus_COMPLETED </span><span class="cov0" title="0">{
+                return &amp;pb.CancelReservationResponse{
+                        Success: false,
+                        Message: "Cannot cancel a completed reservation",
+                }, nil
+        }</span>
+
+        <span class="cov0" title="0">_, err = docRef.Update(ctx, []firestore.Update{
+                {Path: "status", Value: int32(pb.ReservationStatus_CANCELLED)},
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "failed to cancel reservation: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;pb.CancelReservationResponse{
+                Success: true,
+                Message: "Reservation cancelled successfully",
+        }, nil</span>
+}
+
+// ==================== Helpers ====================
+
+func docToGarage(doc *firestore.DocumentSnapshot) *pb.Garage <span class="cov0" title="0">{
+        data := doc.Data()
+
+        var campaigns []*pb.Campaign
+        if camps, ok := data["campaigns"].([]interface{}); ok </span><span class="cov0" title="0">{
+                for _, c := range camps </span><span class="cov0" title="0">{
+                        cMap := c.(map[string]interface{})
+                        campaigns = append(campaigns, &amp;pb.Campaign{
+                                PartnerName:  getString(cMap, "partner_name"),
+                                DiscountRule: getString(cMap, "discount_rule"),
+                        })
+                }</span>
+        }
+
+        <span class="cov0" title="0">return &amp;pb.Garage{
+                Id:             doc.Ref.ID,
+                Name:           getString(data, "name"),
+                BasePrice:      getFloat64(data, "base_price"),
+                Latitude:       getFloat64(data, "latitude"),
+                Longitude:      getFloat64(data, "longitude"),
+                ImageUrl:       getString(data, "image_url"),
+                Campaigns:      campaigns,
+                Address:        getString(data, "address"),
+                Phone:          getString(data, "phone"),
+                TotalSpots:     getInt32(data, "total_spots"),
+                AvailableSpots: getInt32(data, "available_spots"),
+                Amenities:      getStringSlice(data, "amenities"),
+        }</span>
+}
+
+func docToReservation(doc *firestore.DocumentSnapshot) *pb.Reservation <span class="cov0" title="0">{
+        data := doc.Data()
+        return &amp;pb.Reservation{
+                Id:           doc.Ref.ID,
+                UserId:       getString(data, "user_id"),
+                GarageId:     getString(data, "garage_id"),
+                GarageName:   getString(data, "garage_name"),
+                StartTime:    getInt64(data, "start_time"),
+                EndTime:      getInt64(data, "end_time"),
+                VehiclePlate: getString(data, "vehicle_plate"),
+                TotalPrice:   getFloat64(data, "total_price"),
+                Status:       pb.ReservationStatus(getInt32(data, "status")),
+                CreatedAt:    getInt64(data, "created_at"),
+        }
+}</span>
+
+func getString(data map[string]interface{}, key string) string <span class="cov0" title="0">{
+        if v, ok := data[key].(string); ok </span><span class="cov0" title="0">{
+                return v
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func getFloat64(data map[string]interface{}, key string) float64 <span class="cov0" title="0">{
+        if v, ok := data[key].(float64); ok </span><span class="cov0" title="0">{
+                return v
+        }</span>
+        <span class="cov0" title="0">return 0</span>
+}
+
+func getInt32(data map[string]interface{}, key string) int32 <span class="cov0" title="0">{
+        if v, ok := data[key].(int64); ok </span><span class="cov0" title="0">{
+                return int32(v)
+        }</span>
+        <span class="cov0" title="0">if v, ok := data[key].(int32); ok </span><span class="cov0" title="0">{
+                return v
+        }</span>
+        <span class="cov0" title="0">return 0</span>
+}
+
+func getInt64(data map[string]interface{}, key string) int64 <span class="cov0" title="0">{
+        if v, ok := data[key].(int64); ok </span><span class="cov0" title="0">{
+                return v
+        }</span>
+        <span class="cov0" title="0">return 0</span>
+}
+
+func getStringSlice(data map[string]interface{}, key string) []string <span class="cov0" title="0">{
+        if v, ok := data[key].([]interface{}); ok </span><span class="cov0" title="0">{
+                result := make([]string, 0, len(v))
+                for _, item := range v </span><span class="cov0" title="0">{
+                        if s, ok := item.(string); ok </span><span class="cov0" title="0">{
+                                result = append(result, s)
+                        }</span>
+                }
+                <span class="cov0" title="0">return result</span>
+        }
+        <span class="cov0" title="0">return nil</span>
+}
+
+func distance(lat1, lon1, lat2, lon2 float64) float64 <span class="cov0" title="0">{
+        const R = 6371000
+        dLat := (lat2 - lat1) * (math.Pi / 180.0)
+        dLon := (lon2 - lon1) * (math.Pi / 180.0)
+
+        a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+                math.Cos(lat1*(math.Pi/180.0))*math.Cos(lat2*(math.Pi/180.0))*
+                        math.Sin(dLon/2)*math.Sin(dLon/2)
+        c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+        return R * c
+}</span>
+
+// ==================== Delegação para VehicleService ====================
+
+// RecordVehicleEntry delega para o VehicleService (B+Tree local)
+func (s *ParkingService) RecordVehicleEntry(ctx context.Context, req *pb.VehicleEntryRequest) (*pb.VehicleEntryResponse, error) <span class="cov0" title="0">{
+        return s.vehicleService.RecordVehicleEntry(ctx, req)
+}</span>
+
+// RecordVehicleExit delega para o VehicleService
+func (s *ParkingService) RecordVehicleExit(ctx context.Context, req *pb.VehicleExitRequest) (*pb.VehicleExitResponse, error) <span class="cov0" title="0">{
+        return s.vehicleService.RecordVehicleExit(ctx, req)
+}</span>
+
+// GetActiveVehicles delega para o VehicleService
+func (s *ParkingService) GetActiveVehicles(ctx context.Context, req *pb.GetActiveVehiclesRequest) (*pb.GetActiveVehiclesResponse, error) <span class="cov0" title="0">{
+        return s.vehicleService.GetActiveVehicles(ctx, req)
+}</span>
+
+// GetVehicleEntry delega para o VehicleService
+func (s *ParkingService) GetVehicleEntry(ctx context.Context, req *pb.GetVehicleEntryRequest) (*pb.VehicleEntry, error) <span class="cov0" title="0">{
+        return s.vehicleService.GetVehicleEntry(ctx, req)
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package service
+
+import (
+        "context"
+        "fmt"
+        "log"
+        "time"
+
+        "cloud.google.com/go/firestore"
+        firebase "firebase.google.com/go"
+        "firebase.google.com/go/messaging"
+        "github.com/emersonnjsantos/ParkingZero/backend-api/internal/auth"
+        pb "github.com/emersonnjsantos/ParkingZero/pkg/pb"
+        "google.golang.org/grpc/codes"
+        "google.golang.org/grpc/status"
+)
+
+const (
+        MinInvoiceAmountUSD         = 200.0
+        CollectionReservations      = "reservations"
+        CollectionFinancialPending  = "financial_pending"
+        CollectionUsedInvoices      = "used_invoices"
+        CollectionUsers             = "users"
+        CollectionStores            = "stores"
+        CollectionSponsorshipLedger = "sponsorship_ledger" // Sub-coleção Multi-Sponsor
+        CollectionUsedVouchers      = "used_vouchers"      // Anti-fraude offline
+        CollectionBIEvents          = "bi_events"          // Inteligência de dados
+)
+
+// PaymentService implementa o serviço de patrocínio de lojas
+type PaymentService struct {
+        pb.UnimplementedPaymentServiceServer
+        firestoreClient *firestore.Client
+        fcmClient       *messaging.Client
+        voucherService  *VoucherService // Serviço de geração de vouchers JWT
+}
+
+// NewPaymentService cria uma nova instância do PaymentService
+func NewPaymentService(firestoreClient *firestore.Client, firebaseApp *firebase.App) (*PaymentService, error) <span class="cov0" title="0">{
+        ctx := context.Background()
+        fcmClient, err := firebaseApp.Messaging(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Warning: FCM client not initialized: %v", err)
+                // Continua sem FCM para não bloquear o serviço
+        }</span>
+
+        // Inicializar serviço de vouchers JWT
+        <span class="cov0" title="0">voucherService, err := NewVoucherService()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Warning: VoucherService not initialized: %v", err)
+                // Continua sem VoucherService - vouchers não serão gerados
+        }</span>
+
+        <span class="cov0" title="0">return &amp;PaymentService{
+                firestoreClient: firestoreClient,
+                fcmClient:       fcmClient,
+                voucherService:  voucherService,
+        }, nil</span>
+}
+
+// ==================== RequestSponsorship ====================
+// Loja patrocina o estacionamento do cliente após validar nota fiscal
+// MULTI-SPONSOR: Permite múltiplas lojas patrocinarem a mesma reserva
+
+func (s *PaymentService) RequestSponsorship(ctx context.Context, req *pb.SponsorshipRequest) (*pb.SponsorshipResponse, error) <span class="cov0" title="0">{
+        // 1. RBAC: Apenas PARTNER_STORE pode executar
+        claims, err := auth.RequireRole(ctx, auth.RolePartnerStore, auth.RoleAdmin)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // 2. Validações básicas
+        <span class="cov0" title="0">if req.GetReservationId() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "reservation_id is required")
+        }</span>
+        <span class="cov0" title="0">if req.GetInvoice() == nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "invoice is required")
+        }</span>
+
+        // 3. Validar valor mínimo da nota fiscal
+        <span class="cov0" title="0">if req.GetInvoice().GetAmountUsd() &lt; MinInvoiceAmountUSD </span><span class="cov0" title="0">{
+                return &amp;pb.SponsorshipResponse{
+                        Success:   false,
+                        Message:   fmt.Sprintf("Invoice amount $%.2f is below minimum $%.2f", req.GetInvoice().GetAmountUsd(), MinInvoiceAmountUSD),
+                        ErrorCode: "AMOUNT_INSUFFICIENT",
+                }, nil
+        }</span>
+
+        <span class="cov0" title="0">invoiceID := req.GetInvoice().GetInvoiceId()
+        syncID := req.GetSyncId() // Para idempotência offline
+        storeID := claims.PartnerID
+        if storeID == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.FailedPrecondition, "user not linked to any store")
+        }</span>
+        <span class="cov0" title="0">storeName := claims.PartnerName
+        if storeName == "" </span><span class="cov0" title="0">{
+                storeName = req.GetInvoice().GetStoreName()
+        }</span>
+        <span class="cov0" title="0">reservationID := req.GetReservationId()
+
+        // Taxa de câmbio (placeholder - integrar API real em produção)
+        exchangeRate := 5.0
+
+        // Variáveis de resultado da transação
+        var userId string
+        var originalPrice float64
+        var currentBalance float64
+        var totalSponsored float64
+        var newStatus pb.TicketStatus
+        var garageId string
+        var garageName string
+        var vehiclePlate string
+        var ledgerEntryID string
+        var sponsorsSummary []SponsorClaim
+
+        // 4. Transação atômica no Firestore
+        err = s.firestoreClient.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error </span><span class="cov0" title="0">{
+                // 4a. Verificar idempotência via sync_id (para offline)
+                if syncID != "" </span><span class="cov0" title="0">{
+                        idempotencyRef := s.firestoreClient.Collection(CollectionReservations).
+                                Doc(reservationID).
+                                Collection(CollectionSponsorshipLedger).
+                                Where("sync_id", "==", syncID).
+                                Limit(1)
+                        existingDocs, err := idempotencyRef.Documents(ctx).GetAll()
+                        if err == nil &amp;&amp; len(existingDocs) &gt; 0 </span><span class="cov0" title="0">{
+                                // Já processado - retornar sucesso sem reprocessar
+                                return status.Errorf(codes.AlreadyExists, "sync_id %s already processed", syncID)
+                        }</span>
+                }
+
+                // 4b. Verificar se invoice_id já foi usada (Anti-Fraude)
+                <span class="cov0" title="0">invoiceKey := fmt.Sprintf("%s_%s", storeID, invoiceID)
+                invoiceRef := s.firestoreClient.Collection(CollectionUsedInvoices).Doc(invoiceKey)
+                invoiceDoc, err := tx.Get(invoiceRef)
+                if err == nil &amp;&amp; invoiceDoc.Exists() </span><span class="cov0" title="0">{
+                        return status.Errorf(codes.AlreadyExists, "invoice %s already used", invoiceID)
+                }</span>
+
+                // 4c. Buscar reserva e verificar status
+                <span class="cov0" title="0">reservationRef := s.firestoreClient.Collection(CollectionReservations).Doc(reservationID)
+                reservationDoc, err := tx.Get(reservationRef)
+                if err != nil </span><span class="cov0" title="0">{
+                        return status.Errorf(codes.NotFound, "reservation not found: %s", reservationID)
+                }</span>
+
+                <span class="cov0" title="0">data := reservationDoc.Data()
+                currentStatusInt := int32(0)
+                if v, ok := data["ticket_status"].(int64); ok </span><span class="cov0" title="0">{
+                        currentStatusInt = int32(v)
+                }</span>
+
+                // Aceita CREATED, PARTIALLY_SPONSORED, ou PENDING (migração)
+                <span class="cov0" title="0">validStatuses := []int32{
+                        int32(pb.TicketStatus_TICKET_CREATED),
+                        int32(pb.TicketStatus_TICKET_PARTIALLY_SPONSORED),
+                        int32(pb.ReservationStatus_PENDING),
+                }
+                isValidStatus := false
+                for _, vs := range validStatuses </span><span class="cov0" title="0">{
+                        if currentStatusInt == vs </span><span class="cov0" title="0">{
+                                isValidStatus = true
+                                break</span>
+                        }
+                }
+                <span class="cov0" title="0">if !isValidStatus </span><span class="cov0" title="0">{
+                        return status.Errorf(codes.FailedPrecondition, "reservation cannot be sponsored (status: %d)", currentStatusInt)
+                }</span>
+
+                // Extrair dados da reserva
+                <span class="cov0" title="0">userId = getString(data, "user_id")
+                originalPrice = getFloat64(data, "original_price")
+                if originalPrice == 0 </span><span class="cov0" title="0">{
+                        originalPrice = getFloat64(data, "total_price")
+                }</span>
+                <span class="cov0" title="0">garageName = getString(data, "garage_name")
+                garageId = getString(data, "garage_id")
+                vehiclePlate = getString(data, "vehicle_plate")
+
+                // Calcular saldo atual (pode já ter sido parcialmente patrocinado)
+                currentBalance = getFloat64(data, "current_balance")
+                if currentBalance == 0 </span><span class="cov0" title="0">{
+                        currentBalance = originalPrice // Primeira vez
+                }</span>
+                <span class="cov0" title="0">totalSponsored = getFloat64(data, "total_sponsored")
+
+                // Determinar valor a patrocinar
+                amountToSponsor := req.GetAmountToSponsor()
+                if amountToSponsor &lt;= 0 </span><span class="cov0" title="0">{
+                        // Se não especificado, patrocina o saldo total restante
+                        amountToSponsor = currentBalance
+                }</span>
+                <span class="cov0" title="0">if amountToSponsor &gt; currentBalance </span><span class="cov0" title="0">{
+                        amountToSponsor = currentBalance // Não pode patrocinar mais que o saldo
+                }</span>
+
+                // 4d. Marcar invoice como usada
+                <span class="cov0" title="0">now := time.Now().Unix()
+                err = tx.Set(invoiceRef, map[string]interface{}{
+                        "invoice_id":       invoiceID,
+                        "store_id":         storeID,
+                        "reservation_id":   reservationID,
+                        "amount_usd":       req.GetInvoice().GetAmountUsd(),
+                        "amount_sponsored": amountToSponsor,
+                        "used_at":          now,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                // 4e. Criar entrada no Ledger de Patrocínios (Sub-coleção)
+                <span class="cov0" title="0">ledgerRef := s.firestoreClient.Collection(CollectionReservations).
+                        Doc(reservationID).
+                        Collection(CollectionSponsorshipLedger).
+                        NewDoc()
+                ledgerEntryID = ledgerRef.ID
+
+                err = tx.Set(ledgerRef, map[string]interface{}{
+                        "id":            ledgerEntryID,
+                        "store_id":      storeID,
+                        "store_name":    storeName,
+                        "amount":        amountToSponsor,
+                        "invoice_id":    invoiceID,
+                        "timestamp":     now,
+                        "sync_id":       syncID,
+                        "exchange_rate": exchangeRate,
+                        "operator_id":   claims.UserID,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                // 4f. Atualizar saldos e status da reserva
+                <span class="cov0" title="0">newBalance := currentBalance - amountToSponsor
+                newTotalSponsored := totalSponsored + amountToSponsor
+
+                // Determinar novo status
+                if newBalance &lt;= 0 </span><span class="cov0" title="0">{
+                        newStatus = pb.TicketStatus_TICKET_SPONSORED
+                        newBalance = 0
+                }</span> else<span class="cov0" title="0"> {
+                        newStatus = pb.TicketStatus_TICKET_PARTIALLY_SPONSORED
+                }</span>
+
+                // Atualizar reserva com novos valores
+                <span class="cov0" title="0">updates := []firestore.Update{
+                        {Path: "ticket_status", Value: int32(newStatus)},
+                        {Path: "current_balance", Value: newBalance},
+                        {Path: "total_sponsored", Value: newTotalSponsored},
+                        {Path: "last_sponsored_at", Value: now},
+                }
+
+                // Se totalmente patrocinado, adicionar campos legados para compatibilidade
+                if newStatus == pb.TicketStatus_TICKET_SPONSORED </span><span class="cov0" title="0">{
+                        updates = append(updates,
+                                firestore.Update{Path: "amount_to_pay", Value: 0},
+                                firestore.Update{Path: "payer_id", Value: storeID},
+                                firestore.Update{Path: "payer_name", Value: storeName},
+                        )
+                }</span>
+
+                <span class="cov0" title="0">err = tx.Update(reservationRef, updates)
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                // Atualizar variáveis de resultado
+                <span class="cov0" title="0">currentBalance = newBalance
+                totalSponsored = newTotalSponsored
+
+                // 4g. Criar log de auditoria financial_pending
+                financialRef := s.firestoreClient.Collection(CollectionFinancialPending).NewDoc()
+                err = tx.Set(financialRef, map[string]interface{}{
+                        "type":            "SPONSORSHIP",
+                        "store_id":        storeID,
+                        "store_name":      storeName,
+                        "operator_id":     claims.UserID,
+                        "garage_id":       garageId,
+                        "garage_name":     garageName,
+                        "amount_brl":      amountToSponsor,
+                        "exchange_rate":   exchangeRate,
+                        "amount_usd":      amountToSponsor / exchangeRate,
+                        "reservation_id":  reservationID,
+                        "invoice_id":      invoiceID,
+                        "invoice_amount":  req.GetInvoice().GetAmountUsd(),
+                        "status":          "PENDING",
+                        "created_at":      now,
+                        "ledger_entry_id": ledgerEntryID,
+                        "is_partial":      newStatus == pb.TicketStatus_TICKET_PARTIALLY_SPONSORED,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                // 4h. Coletar resumo de patrocinadores para o voucher
+                <span class="cov0" title="0">sponsorsSummary = append(sponsorsSummary, SponsorClaim{
+                        StoreName: storeName,
+                        Amount:    amountToSponsor,
+                })
+
+                return nil</span>
+        })
+
+        // Tratar erros da transação
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                if st, ok := status.FromError(err); ok </span><span class="cov0" title="0">{
+                        if st.Code() == codes.AlreadyExists </span><span class="cov0" title="0">{
+                                if syncID != "" &amp;&amp; st.Message() == fmt.Sprintf("sync_id %s already processed", syncID) </span><span class="cov0" title="0">{
+                                        // Idempotência: retornar sucesso
+                                        return &amp;pb.SponsorshipResponse{
+                                                Success:   true,
+                                                Message:   "Patrocínio já processado (idempotência)",
+                                                NewStatus: newStatus,
+                                        }, nil
+                                }</span>
+                                <span class="cov0" title="0">return &amp;pb.SponsorshipResponse{
+                                        Success:   false,
+                                        Message:   st.Message(),
+                                        ErrorCode: "INVOICE_ALREADY_USED",
+                                }, nil</span>
+                        }
+                }
+                <span class="cov0" title="0">return nil, err</span>
+        }
+
+        // 5. Gerar voucher JWT se totalmente patrocinado
+        <span class="cov0" title="0">var signedVoucher *pb.SignedVoucher
+        if newStatus == pb.TicketStatus_TICKET_SPONSORED &amp;&amp; s.voucherService != nil </span><span class="cov0" title="0">{
+                voucherResult, err := s.voucherService.GenerateVoucher(
+                        reservationID,
+                        garageId,
+                        vehiclePlate,
+                        originalPrice,
+                        sponsorsSummary,
+                )
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Warning: failed to generate voucher: %v", err)
+                }</span> else<span class="cov0" title="0"> {
+                        signedVoucher = &amp;pb.SignedVoucher{
+                                Jwt:        voucherResult.JWT,
+                                Jti:        voucherResult.JTI,
+                                ExpiresAt:  voucherResult.ExpiresAt,
+                                QrCodeData: voucherResult.JWT, // QR code contém o JWT
+                        }
+                }</span>
+        }
+
+        // 6. Dispara notificação FCM (goroutine para não bloquear resposta)
+        <span class="cov0" title="0">go s.sendSponsorshipNotification(context.Background(), userId, storeName, reservationID)
+
+        // 7. Retornar resposta com dados Multi-Sponsor
+        return &amp;pb.SponsorshipResponse{
+                Success:         true,
+                Message:         fmt.Sprintf("Patrocínio de R$ %.2f registrado por %s", totalSponsored-currentBalance, storeName),
+                NewStatus:       newStatus,
+                LedgerEntryId:   ledgerEntryID,
+                AmountSponsored: totalSponsored - currentBalance,
+                CurrentBalance:  currentBalance,
+                TotalSponsored:  totalSponsored,
+                ExchangeRate:    exchangeRate,
+                Voucher:         signedVoucher,
+        }, nil</span>
+}
+
+// ==================== GetVoucherStatus ====================
+// App faz polling para verificar status do voucher
+
+func (s *PaymentService) GetVoucherStatus(ctx context.Context, req *pb.GetVoucherStatusRequest) (*pb.VoucherStatus, error) <span class="cov0" title="0">{
+        if req.GetReservationId() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "reservation_id is required")
+        }</span>
+
+        <span class="cov0" title="0">doc, err := s.firestoreClient.Collection(CollectionReservations).Doc(req.GetReservationId()).Get(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.NotFound, "reservation not found")
+        }</span>
+
+        <span class="cov0" title="0">data := doc.Data()
+        ticketStatus := getTicketStatus(data)
+
+        return &amp;pb.VoucherStatus{
+                ReservationId: req.GetReservationId(),
+                Status:        ticketStatus,
+                PayerId:       getString(data, "payer_id"),
+                PayerName:     getString(data, "payer_name"),
+                OriginalPrice: getFloat64(data, "original_price"),
+                AmountToPay:   getFloat64(data, "amount_to_pay"),
+        }, nil</span>
+}
+
+// ==================== VerifyExit ====================
+// Guarda da guarita verifica se veículo pode sair
+
+func (s *PaymentService) VerifyExit(ctx context.Context, req *pb.VerifyExitRequest) (*pb.VerifyExitResponse, error) <span class="cov0" title="0">{
+        // 1. RBAC: Apenas PARTNER_PARKING pode executar
+        claims, err := auth.RequireRole(ctx, auth.RolePartnerParking, auth.RoleAdmin)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // 2. Usar garage_id do contexto (segurança - guarda só vê sua garagem)
+        <span class="cov0" title="0">garageID := claims.PartnerID
+        if garageID == "" </span><span class="cov0" title="0">{
+                // Fallback para request (admin pode consultar qualquer garagem)
+                garageID = req.GetGarageId()
+        }</span>
+
+        <span class="cov0" title="0">if req.GetVehiclePlate() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "vehicle_plate is required")
+        }</span>
+
+        // 3. Buscar reserva ativa por placa e garagem
+        <span class="cov0" title="0">iter := s.firestoreClient.Collection(CollectionReservations).
+                Where("garage_id", "==", garageID).
+                Where("vehicle_plate", "==", req.GetVehiclePlate()).
+                OrderBy("created_at", firestore.Desc).
+                Limit(1).
+                Documents(ctx)
+
+        doc, err := iter.Next()
+        if err != nil </span><span class="cov0" title="0">{
+                return &amp;pb.VerifyExitResponse{
+                        Authorized:     false,
+                        Message:        "Veículo não encontrado",
+                        DisplayMessage: "VEÍCULO NÃO REGISTRADO",
+                        ActionRequired: "VALIDATE_INVOICE",
+                }, nil
+        }</span>
+
+        <span class="cov0" title="0">data := doc.Data()
+        ticketStatus := getTicketStatus(data)
+        payerName := getString(data, "payer_name")
+        originalPrice := getFloat64(data, "original_price")
+        if originalPrice == 0 </span><span class="cov0" title="0">{
+                originalPrice = getFloat64(data, "total_price")
+        }</span>
+
+        <span class="cov0" title="0">switch ticketStatus </span>{
+        case pb.TicketStatus_TICKET_SPONSORED:<span class="cov0" title="0">
+                return &amp;pb.VerifyExitResponse{
+                        Authorized:     true,
+                        Message:        "AUTHORIZED",
+                        DisplayMessage: fmt.Sprintf("Boa viagem! Cortesia da %s 🎉", payerName),
+                        Status:         pb.TicketStatus_TICKET_SPONSORED,
+                        PayerName:      payerName,
+                        ActionRequired: "NONE",
+                        AmountDue:      0,
+                }, nil</span>
+
+        case pb.TicketStatus_TICKET_COMPLETED:<span class="cov0" title="0">
+                return &amp;pb.VerifyExitResponse{
+                        Authorized:     false,
+                        Message:        "Ticket já utilizado",
+                        DisplayMessage: "TICKET JÁ USADO",
+                        Status:         pb.TicketStatus_TICKET_COMPLETED,
+                        ActionRequired: "NONE",
+                }, nil</span>
+
+        default:<span class="cov0" title="0"> // CREATED ou outros
+                return &amp;pb.VerifyExitResponse{
+                        Authorized:     false,
+                        Message:        "Pagamento necessário",
+                        DisplayMessage: fmt.Sprintf("PAGAMENTO PENDENTE: R$ %.2f", originalPrice),
+                        Status:         ticketStatus,
+                        ActionRequired: "PAYMENT_REQUIRED",
+                        AmountDue:      originalPrice,
+                }, nil</span>
+        }
+}
+
+// ==================== ConfirmExit ====================
+// Guarda confirma saída física do veículo
+
+func (s *PaymentService) ConfirmExit(ctx context.Context, req *pb.ConfirmExitRequest) (*pb.ConfirmExitResponse, error) <span class="cov0" title="0">{
+        // 1. RBAC: Apenas PARTNER_PARKING pode confirmar saída
+        claims, err := auth.RequireRole(ctx, auth.RolePartnerParking, auth.RoleAdmin)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // 2. Usar garage_id do contexto (segurança)
+        <span class="cov0" title="0">garageID := claims.PartnerID
+        if garageID == "" </span><span class="cov0" title="0">{
+                garageID = req.GetGarageId()
+        }</span>
+
+        <span class="cov0" title="0">if req.GetVehiclePlate() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "vehicle_plate is required")
+        }</span>
+
+        // 3. Buscar reserva ativa
+        <span class="cov0" title="0">iter := s.firestoreClient.Collection(CollectionReservations).
+                Where("garage_id", "==", garageID).
+                Where("vehicle_plate", "==", req.GetVehiclePlate()).
+                OrderBy("created_at", firestore.Desc).
+                Limit(1).
+                Documents(ctx)
+
+        doc, err := iter.Next()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.NotFound, "reservation not found")
+        }</span>
+
+        // Atualizar para COMPLETED
+        <span class="cov0" title="0">now := time.Now().Unix()
+        _, err = doc.Ref.Update(ctx, []firestore.Update{
+                {Path: "ticket_status", Value: int32(pb.TicketStatus_TICKET_COMPLETED)},
+                {Path: "completed_at", Value: now},
+                {Path: "exit_agent_id", Value: req.GetAgentId()},
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "failed to confirm exit: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;pb.ConfirmExitResponse{
+                Success:     true,
+                Message:     "Saída confirmada com sucesso",
+                FinalStatus: pb.TicketStatus_TICKET_COMPLETED,
+        }, nil</span>
+}
+
+// ==================== GetSponsorshipLedger ====================
+// Retorna o histórico de patrocínios de uma reserva
+
+func (s *PaymentService) GetSponsorshipLedger(ctx context.Context, req *pb.GetSponsorshipLedgerRequest) (*pb.SponsorshipLedgerResponse, error) <span class="cov0" title="0">{
+        // RBAC: USER, PARTNER_STORE ou ADMIN podem ver
+        _, err := auth.RequireRole(ctx, auth.RoleUser, auth.RolePartnerStore, auth.RoleAdmin)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">if req.GetReservationId() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "reservation_id is required")
+        }</span>
+
+        // Buscar entradas do ledger
+        <span class="cov0" title="0">ledgerRef := s.firestoreClient.Collection(CollectionReservations).
+                Doc(req.GetReservationId()).
+                Collection(CollectionSponsorshipLedger).
+                OrderBy("timestamp", firestore.Desc)
+
+        docs, err := ledgerRef.Documents(ctx).GetAll()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "failed to fetch ledger: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">var entries []*pb.SponsorshipLedgerEntry
+        var totalSponsored float64
+
+        for _, doc := range docs </span><span class="cov0" title="0">{
+                data := doc.Data()
+                entry := &amp;pb.SponsorshipLedgerEntry{
+                        EntryId:      getString(data, "id"),
+                        StoreId:      getString(data, "store_id"),
+                        StoreName:    getString(data, "store_name"),
+                        Amount:       getFloat64(data, "amount"),
+                        InvoiceId:    getString(data, "invoice_id"),
+                        Timestamp:    getInt64(data, "timestamp"),
+                        SyncId:       getString(data, "sync_id"),
+                        ExchangeRate: getFloat64(data, "exchange_rate"),
+                        OperatorId:   getString(data, "operator_id"),
+                }
+                entries = append(entries, entry)
+                totalSponsored += entry.Amount
+        }</span>
+
+        <span class="cov0" title="0">return &amp;pb.SponsorshipLedgerResponse{
+                ReservationId:  req.GetReservationId(),
+                Entries:        entries,
+                TotalSponsored: totalSponsored,
+                EntryCount:     int32(len(entries)),
+        }, nil</span>
+}
+
+// ==================== RegisterUsedVoucher ====================
+// Registra que um voucher foi usado (anti-fraude para validação offline)
+
+func (s *PaymentService) RegisterUsedVoucher(ctx context.Context, req *pb.RegisterUsedVoucherRequest) (*pb.RegisterUsedVoucherResponse, error) <span class="cov0" title="0">{
+        // RBAC: Apenas PARTNER_PARKING ou ADMIN podem registrar
+        claims, err := auth.RequireRole(ctx, auth.RolePartnerParking, auth.RoleAdmin)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">if req.GetJti() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "jti is required")
+        }</span>
+
+        // Verificar se voucher já foi usado
+        <span class="cov0" title="0">voucherRef := s.firestoreClient.Collection(CollectionUsedVouchers).Doc(req.GetJti())
+        voucherDoc, err := voucherRef.Get(ctx)
+        if err == nil &amp;&amp; voucherDoc.Exists() </span><span class="cov0" title="0">{
+                // Voucher já usado - Anti-Fraude!
+                data := voucherDoc.Data()
+                return &amp;pb.RegisterUsedVoucherResponse{
+                        Success:      false,
+                        ErrorCode:    "VOUCHER_ALREADY_USED",
+                        Message:      fmt.Sprintf("Voucher já utilizado em %s", time.Unix(getInt64(data, "used_at"), 0).Format("02/01/2006 15:04")),
+                        UsedAt:       getInt64(data, "used_at"),
+                        UsedByGarage: getString(data, "garage_id"),
+                }, nil
+        }</span>
+
+        // Registrar uso do voucher
+        <span class="cov0" title="0">now := time.Now().Unix()
+        _, err = voucherRef.Set(ctx, map[string]interface{}{
+                "jti":            req.GetJti(),
+                "reservation_id": req.GetReservationId(),
+                "garage_id":      claims.PartnerID,
+                "operator_id":    claims.UserID,
+                "used_at":        now,
+                "sync_id":        req.GetSyncId(), // Para reconciliação offline
+                "vehicle_plate":  req.GetVehiclePlate(),
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "failed to register voucher: %v", err)
+        }</span>
+
+        // Log de BI
+        <span class="cov0" title="0">go s.logBIEvent(context.Background(), "VOUCHER_VERIFIED", map[string]interface{}{
+                "jti":            req.GetJti(),
+                "reservation_id": req.GetReservationId(),
+                "garage_id":      claims.PartnerID,
+                "operator_id":    claims.UserID,
+                "timestamp":      now,
+                "sync_id":        req.GetSyncId(),
+        })
+
+        return &amp;pb.RegisterUsedVoucherResponse{
+                Success: true,
+                Message: "Voucher validado com sucesso",
+                UsedAt:  now,
+        }, nil</span>
+}
+
+// ==================== LogBIEvent ====================
+// Registra eventos para inteligência de dados
+
+func (s *PaymentService) logBIEvent(ctx context.Context, eventType string, data map[string]interface{}) <span class="cov0" title="0">{
+        data["event_type"] = eventType
+        data["logged_at"] = time.Now().Unix()
+
+        _, err := s.firestoreClient.Collection(CollectionBIEvents).NewDoc().Set(ctx, data)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Warning: failed to log BI event: %v", err)
+        }</span>
+}
+
+// ==================== FCM Notification ====================
+
+func (s *PaymentService) sendSponsorshipNotification(ctx context.Context, userId, storeName, reservationId string) <span class="cov0" title="0">{
+        if s.fcmClient == nil </span><span class="cov0" title="0">{
+                log.Printf("FCM client not available, skipping notification for user %s", userId)
+                return
+        }</span>
+
+        // Buscar FCM token do usuário
+        <span class="cov0" title="0">userDoc, err := s.firestoreClient.Collection(CollectionUsers).Doc(userId).Get(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error fetching user %s for FCM: %v", userId, err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">data := userDoc.Data()
+        fcmToken := getString(data, "fcm_token")
+        if fcmToken == "" </span><span class="cov0" title="0">{
+                log.Printf("No FCM token for user %s", userId)
+                return
+        }</span>
+
+        // Enviar notificação
+        <span class="cov0" title="0">message := &amp;messaging.Message{
+                Token: fcmToken,
+                Notification: &amp;messaging.Notification{
+                        Title: "Estacionamento Pago! 🚗✅",
+                        Body:  fmt.Sprintf("A %s validou a sua compra e cobriu o custo do seu estacionamento. Volte tranquilo!", storeName),
+                },
+                Data: map[string]string{
+                        "type":           "SPONSORSHIP_CONFIRMED",
+                        "reservation_id": reservationId,
+                },
+        }
+
+        _, err = s.fcmClient.Send(ctx, message)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error sending FCM to user %s: %v", userId, err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">log.Printf("FCM notification sent successfully to user %s", userId)</span>
+}
+
+// ==================== Helpers ====================
+
+func getTicketStatus(data map[string]interface{}) pb.TicketStatus <span class="cov0" title="0">{
+        // Tentar ler ticket_status primeiro
+        if v, ok := data["ticket_status"].(int64); ok </span><span class="cov0" title="0">{
+                return pb.TicketStatus(v)
+        }</span>
+        // Fallback para status antigo (migração)
+        <span class="cov0" title="0">if v, ok := data["status"].(int64); ok </span><span class="cov0" title="0">{
+                switch pb.ReservationStatus(v) </span>{
+                case pb.ReservationStatus_PENDING, pb.ReservationStatus_ACTIVE:<span class="cov0" title="0">
+                        return pb.TicketStatus_TICKET_CREATED</span>
+                case pb.ReservationStatus_COMPLETED:<span class="cov0" title="0">
+                        return pb.TicketStatus_TICKET_COMPLETED</span>
+                }
+        }
+        <span class="cov0" title="0">return pb.TicketStatus_TICKET_CREATED</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package service
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "log"
+        "os"
+        "time"
+
+        "cloud.google.com/go/firestore"
+        "github.com/emersonnjsantos/ParkingZero/backend-api/internal/database"
+        pb "github.com/emersonnjsantos/ParkingZero/pkg/pb"
+)
+
+// Estados do Circuit Breaker
+const (
+        CircuitClosed   = 0 // Tudo funcionando normalmente
+        CircuitOpen     = 1 // Firestore offline - não tenta sincronizar
+        CircuitHalfOpen = 2 // Testando se Firestore voltou - apenas 1 requisição
+)
+
+// SyncWorker gerencia a sincronização entre o banco local B+Tree e o Firestore
+type SyncWorker struct {
+        localDB         *database.DB
+        firestoreClient *firestore.Client
+        syncQueue       &lt;-chan *pb.VehicleEntry
+        batchSize       int
+        syncInterval    time.Duration
+
+        // Circuit Breaker
+        consecutiveFailures    int
+        maxConsecutiveFailures int
+        circuitState           int // Closed, Open, ou Half-Open
+        lastFailureTime        time.Time
+        circuitResetTime       time.Duration
+
+        // Retry configuration
+        maxRetries     int
+        initialBackoff time.Duration
+
+        // DLQ (Dead Letter Queue)
+        dlqPath string
+        dlqFile *os.File
+}
+
+// NewSyncWorker cria um novo worker de sincronização
+func NewSyncWorker(
+        localDB *database.DB,
+        firestoreClient *firestore.Client,
+        syncQueue &lt;-chan *pb.VehicleEntry,
+) *SyncWorker <span class="cov0" title="0">{
+        return &amp;SyncWorker{
+                localDB:         localDB,
+                firestoreClient: firestoreClient,
+                syncQueue:       syncQueue,
+                batchSize:       10,              // Sincronizar em lotes de 10
+                syncInterval:    5 * time.Second, // Intervalo de 5 segundos
+
+                // Circuit Breaker config
+                maxConsecutiveFailures: 5,
+                circuitResetTime:       30 * time.Second,
+
+                // Retry config
+                maxRetries:     3,
+                initialBackoff: time.Second,
+
+                // DLQ
+                dlqPath: "./sync_dlq.log",
+        }
+}</span>
+
+// Start inicia o worker de sincronização (executa em goroutine)
+func (w *SyncWorker) Start(ctx context.Context) <span class="cov0" title="0">{
+        log.Println("🔄 Sync Worker iniciado - sincronizando B+Tree → Firestore")
+
+        ticker := time.NewTicker(w.syncInterval)
+        defer ticker.Stop()
+
+        batch := make([]*pb.VehicleEntry, 0, w.batchSize)
+
+        for </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        // Contexto cancelado - sincronizar batch pendente antes de sair
+                        if len(batch) &gt; 0 </span><span class="cov0" title="0">{
+                                w.syncBatch(context.Background(), batch)
+                        }</span>
+                        <span class="cov0" title="0">log.Println("⏹️  Sync Worker encerrado")
+                        return</span>
+
+                case entry := &lt;-w.syncQueue:<span class="cov0" title="0">
+                        // Nova entrada na fila
+                        batch = append(batch, entry)
+
+                        // Se batch atingiu o tamanho máximo, sincronizar imediatamente
+                        if len(batch) &gt;= w.batchSize </span><span class="cov0" title="0">{
+                                w.syncBatch(ctx, batch)
+                                batch = batch[:0] // Limpar batch
+                        }</span>
+
+                case &lt;-ticker.C:<span class="cov0" title="0">
+                        // Intervalo atingido - sincronizar batch pendente
+                        if len(batch) &gt; 0 </span><span class="cov0" title="0">{
+                                w.syncBatch(ctx, batch)
+                                batch = batch[:0]
+                        }</span>
+
+                        // Atualizar LastSyncedID na meta page
+                        <span class="cov0" title="0">w.updateLastSyncedID()</span>
+                }
+        }
+}
+
+// syncBatch sincroniza um lote de entradas com o Firestore (com retry e circuit breaker)
+func (w *SyncWorker) syncBatch(ctx context.Context, entries []*pb.VehicleEntry) <span class="cov0" title="0">{
+        if len(entries) == 0 </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Verificar estado do circuit breaker
+        <span class="cov0" title="0">if w.circuitState == CircuitOpen </span><span class="cov0" title="0">{
+                // Verificar se já passou o tempo de reset
+                if time.Since(w.lastFailureTime) &gt; w.circuitResetTime </span><span class="cov0" title="0">{
+                        log.Println("🟡 Circuit breaker: Mudando para HALF-OPEN (modo de teste)")
+                        w.circuitState = CircuitHalfOpen
+                }</span> else<span class="cov0" title="0"> {
+                        timeRemaining := w.circuitResetTime - time.Since(w.lastFailureTime)
+                        log.Printf("⚠️  Circuit breaker ABERTO - pulando sincronização (aguardando %v)\n", timeRemaining)
+                        // Salvar em DLQ para não perder
+                        w.saveToDLQ(entries)
+                        return
+                }</span>
+        }
+
+        // Modo HALF-OPEN: testar com apenas 1 entrada
+        <span class="cov0" title="0">if w.circuitState == CircuitHalfOpen </span><span class="cov0" title="0">{
+                log.Println("🧪 HALF-OPEN: Testando conexão com Firestore (1 entrada)...")
+
+                testEntry := []*pb.VehicleEntry{entries[0]}
+                err := w.syncBatchWithRetry(ctx, testEntry)
+
+                if err != nil </span><span class="cov0" title="0">{
+                        // ❌ Teste falhou - Firestore ainda offline
+                        log.Printf("❌ Teste HALF-OPEN falhou: %v\n", err)
+                        log.Println("🔴 Retornando para OPEN - Firestore ainda indisponível")
+                        w.circuitState = CircuitOpen
+                        w.consecutiveFailures++
+                        w.lastFailureTime = time.Now()
+
+                        // Salvar TODAS as entradas em DLQ (incluindo a testada)
+                        w.saveToDLQ(entries)
+                        return
+                }</span>
+
+                // ✅ Teste passou - Firestore voltou!
+                <span class="cov0" title="0">log.Println("✅ Teste HALF-OPEN PASSOU! Firestore está online novamente")
+                log.Println("🟢 Circuit breaker: FECHADO")
+                w.circuitState = CircuitClosed
+                w.consecutiveFailures = 0
+
+                // Processar resto do batch (se houver)
+                if len(entries) &gt; 1 </span><span class="cov0" title="0">{
+                        log.Printf("📤 Processando resto do batch (%d entradas)...\n", len(entries)-1)
+                        remainingEntries := entries[1:]
+                        if err := w.syncBatchWithRetry(ctx, remainingEntries); err != nil </span><span class="cov0" title="0">{
+                                log.Printf("⚠️  Erro ao processar resto do batch: %v\n", err)
+                                w.saveToDLQ(remainingEntries)
+                        }</span> else<span class="cov0" title="0"> {
+                                log.Printf("✅ %d entradas sincronizadas com sucesso\n", len(entries))
+                        }</span>
+                } else<span class="cov0" title="0"> {
+                        log.Println("✅ 1 entrada (teste) sincronizada com sucesso")
+                }</span>
+                <span class="cov0" title="0">return</span>
+        }
+
+        // Modo CLOSED: funcionamento normal
+        <span class="cov0" title="0">log.Printf("📤 Sincronizando %d entradas com Firestore...\n", len(entries))
+
+        // Tentar sincronizar com retry
+        err := w.syncBatchWithRetry(ctx, entries)
+
+        if err != nil </span><span class="cov0" title="0">{
+                // Incrementar contador de falhas
+                w.consecutiveFailures++
+                w.lastFailureTime = time.Now()
+
+                log.Printf("❌ Falha após %d tentativas: %v\n", w.maxRetries, err)
+                log.Printf("⚠️  Falhas consecutivas: %d/%d\n", w.consecutiveFailures, w.maxConsecutiveFailures)
+
+                // Abrir circuit breaker se muitas falhas
+                if w.consecutiveFailures &gt;= w.maxConsecutiveFailures </span><span class="cov0" title="0">{
+                        w.circuitState = CircuitOpen
+                        log.Printf("🔴 CIRCUIT BREAKER ABERTO - Firestore indisponível!\n")
+                        log.Printf("   Aguardando %v antes de testar novamente (Half-Open)\n", w.circuitResetTime)
+                }</span>
+
+                // Salvar em DLQ
+                <span class="cov0" title="0">w.saveToDLQ(entries)
+                return</span>
+        }
+
+        // Sucesso: resetar contadores
+        <span class="cov0" title="0">if w.consecutiveFailures &gt; 0 </span><span class="cov0" title="0">{
+                log.Printf("✅ Sincronização recuperada após %d falhas\n", w.consecutiveFailures)
+                w.consecutiveFailures = 0
+        }</span>
+
+        <span class="cov0" title="0">log.Printf("✅ %d entradas sincronizadas com sucesso\n", len(entries))</span>
+}
+
+// syncBatchWithRetry tenta sincronizar com retry e backoff exponencial
+func (w *SyncWorker) syncBatchWithRetry(ctx context.Context, entries []*pb.VehicleEntry) error <span class="cov0" title="0">{
+        backoff := w.initialBackoff
+
+        for attempt := 0; attempt &lt; w.maxRetries; attempt++ </span><span class="cov0" title="0">{
+                err := w.attemptSync(ctx, entries)
+
+                if err == nil </span><span class="cov0" title="0">{
+                        return nil // Sucesso
+                }</span>
+
+                // Se não for a última tentativa, fazer backoff
+                <span class="cov0" title="0">if attempt &lt; w.maxRetries-1 </span><span class="cov0" title="0">{
+                        log.Printf("⚠️  Tentativa %d/%d falhou: %v\n", attempt+1, w.maxRetries, err)
+                        log.Printf("   Aguardando %v antes de tentar novamente...\n", backoff)
+
+                        select </span>{
+                        case &lt;-time.After(backoff):<span class="cov0" title="0">
+                                // Backoff exponencial: 1s, 2s, 4s
+                                backoff *= 2</span>
+                        case &lt;-ctx.Done():<span class="cov0" title="0">
+                                return ctx.Err()</span>
+                        }
+                } else<span class="cov0" title="0"> {
+                        return fmt.Errorf("falhou após %d tentativas: %w", w.maxRetries, err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return fmt.Errorf("todas as tentativas falharam")</span>
+}
+
+// attemptSync tenta sincronizar batch uma única vez
+func (w *SyncWorker) attemptSync(ctx context.Context, entries []*pb.VehicleEntry) error <span class="cov0" title="0">{
+        // Usar batch write do Firestore para melhor performance
+        batch := w.firestoreClient.Batch()
+
+        for _, entry := range entries </span><span class="cov0" title="0">{
+                // Converter para map para o Firestore
+                docData := map[string]interface{}{
+                        "id":            entry.Id,
+                        "garage_id":     entry.GarageId,
+                        "vehicle_plate": entry.VehiclePlate,
+                        "entry_time":    entry.EntryTime,
+                        "exit_time":     entry.ExitTime,
+                        "amount_paid":   entry.AmountPaid,
+                        "status":        int32(entry.Status),
+                        "user_id":       entry.UserId,
+                        "synced_at":     time.Now().Unix(),
+                }
+
+                // Usar ID composto como document ID
+                docRef := w.firestoreClient.Collection("vehicle_entries").Doc(entry.Id)
+                batch.Set(docRef, docData)
+        }</span>
+
+        // Executar batch write
+        <span class="cov0" title="0">_, err := batch.Commit(ctx)
+        return err</span>
+}
+
+// saveToDLQ salva entradas que falharam em Dead Letter Queue
+func (w *SyncWorker) saveToDLQ(entries []*pb.VehicleEntry) <span class="cov0" title="0">{
+        // Abrir arquivo DLQ em modo append
+        file, err := os.OpenFile(w.dlqPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("❌ Erro ao abrir DLQ: %v\n", err)
+                return
+        }</span>
+        <span class="cov0" title="0">defer file.Close()
+
+        for _, entry := range entries </span><span class="cov0" title="0">{
+                // Serializar entrada como JSON
+                jsonData, err := json.Marshal(map[string]interface{}{
+                        "timestamp": time.Now().Unix(),
+                        "entry":     entry,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("❌ Erro ao serializar entrada para DLQ: %v\n", err)
+                        continue</span>
+                }
+
+                // Escrever no arquivo
+                <span class="cov0" title="0">if _, err := file.Write(append(jsonData, '\n')); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("❌ Erro ao escrever em DLQ: %v\n", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">log.Printf("💾 %d entradas salvas em Dead Letter Queue: %s\n", len(entries), w.dlqPath)</span>
+}
+
+// updateLastSyncedID atualiza o LastSyncedID na meta page
+func (w *SyncWorker) updateLastSyncedID() <span class="cov0" title="0">{
+        meta, err := w.localDB.GetMetaPage()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Erro ao obter meta page: %v\n", err)
+                return
+        }</span>
+
+        // Incrementar LastSyncedID (representa o timestamp da última sincronização)
+        <span class="cov0" title="0">meta.LastSyncedID = uint64(time.Now().Unix())
+
+        if err := w.localDB.UpdateMetaPage(meta); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Erro ao atualizar LastSyncedID: %v\n", err)
+        }</span>
+}
+
+// ResyncFromLocalDB força uma ressincronização de todas as entradas locais
+// Útil para recuperação após falhas ou inicialização
+func (w *SyncWorker) ResyncFromLocalDB(ctx context.Context, garageID string) error <span class="cov0" title="0">{
+        log.Printf("🔄 Iniciando ressincronização completa para garagem %s...\n", garageID)
+
+        // TODO: Implementar scan com prefixo quando B+Tree suportar
+        // Por enquanto, esta função é um placeholder
+
+        // Quando implementado, irá:
+        // 1. Escanear todas as chaves com prefixo garage_id|
+        // 2. Ler cada entrada do banco local
+        // 3. Deserializar proto
+        // 4. Enviar para Firestore em batches
+
+        log.Println("⚠️  ResyncFromLocalDB não implementado - aguardando suporte a scan com prefixo")
+        return fmt.Errorf("not implemented")
+}</span>
+
+// GetSyncStats retorna estatísticas de sincronização
+func (w *SyncWorker) GetSyncStats() (*SyncStats, error) <span class="cov0" title="0">{
+        meta, err := w.localDB.GetMetaPage()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">stats, err := w.localDB.GetStats()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return &amp;SyncStats{
+                LastSyncedAt:        time.Unix(int64(meta.LastSyncedID), 0),
+                LocalTotalPages:     stats.TotalPages,
+                QueueSize:           len(w.syncQueue),
+                ConsecutiveFailures: w.consecutiveFailures,
+                CircuitState:        w.circuitState, // 0=Closed, 1=Open, 2=Half-Open
+                DLQPath:             w.dlqPath,
+        }, nil</span>
+}
+
+// SyncStats contém estatísticas do sync worker
+type SyncStats struct {
+        LastSyncedAt        time.Time
+        LocalTotalPages     uint64
+        QueueSize           int
+        ConsecutiveFailures int
+        CircuitState        int // 0=Closed, 1=Open, 2=Half-Open
+        DLQPath             string
+}
+
+// ProcessDLQ reprocessa entradas do Dead Letter Queue
+func (w *SyncWorker) ProcessDLQ(ctx context.Context) error <span class="cov0" title="0">{
+        log.Printf("🔄 Processando Dead Letter Queue: %s\n", w.dlqPath)
+
+        // Abrir arquivo DLQ
+        file, err := os.Open(w.dlqPath)
+        if err != nil </span><span class="cov0" title="0">{
+                if os.IsNotExist(err) </span><span class="cov0" title="0">{
+                        log.Println("✅ DLQ vazio - nada para processar")
+                        return nil
+                }</span>
+                <span class="cov0" title="0">return fmt.Errorf("erro ao abrir DLQ: %w", err)</span>
+        }
+        <span class="cov0" title="0">defer file.Close()
+
+        // Ler todas as linhas
+        var dlqEntries []*pb.VehicleEntry
+        decoder := json.NewDecoder(file)
+
+        for decoder.More() </span><span class="cov0" title="0">{
+                var record struct {
+                        Timestamp int64            `json:"timestamp"`
+                        Entry     *pb.VehicleEntry `json:"entry"`
+                }
+
+                if err := decoder.Decode(&amp;record); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("⚠️  Erro ao decodificar linha DLQ: %v\n", err)
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">dlqEntries = append(dlqEntries, record.Entry)</span>
+        }
+
+        <span class="cov0" title="0">if len(dlqEntries) == 0 </span><span class="cov0" title="0">{
+                log.Println("✅ DLQ vazio - nada para processar")
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">log.Printf("📋 Encontradas %d entradas no DLQ\n", len(dlqEntries))
+
+        // Tentar reprocessar em batches
+        successCount := 0
+        for i := 0; i &lt; len(dlqEntries); i += w.batchSize </span><span class="cov0" title="0">{
+                end := i + w.batchSize
+                if end &gt; len(dlqEntries) </span><span class="cov0" title="0">{
+                        end = len(dlqEntries)
+                }</span>
+
+                <span class="cov0" title="0">batch := dlqEntries[i:end]
+                if err := w.syncBatchWithRetry(ctx, batch); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("❌ Batch %d-%d falhou: %v\n", i, end, err)
+                        // Continuar tentando outros batches
+                }</span> else<span class="cov0" title="0"> {
+                        successCount += len(batch)
+                        log.Printf("✅ Batch %d-%d sincronizado\n", i, end)
+                }</span>
+        }
+
+        // Se conseguiu processar tudo, limpar DLQ
+        <span class="cov0" title="0">if successCount == len(dlqEntries) </span><span class="cov0" title="0">{
+                if err := os.Remove(w.dlqPath); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("⚠️  Erro ao limpar DLQ: %v\n", err)
+                }</span> else<span class="cov0" title="0"> {
+                        log.Println("🗑️  DLQ processado e limpo com sucesso")
+                }</span>
+        } else<span class="cov0" title="0"> {
+                log.Printf("⚠️  Processado %d/%d entradas do DLQ\n", successCount, len(dlqEntries))
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// FullResync força sincronização completa lendo direto do banco local
+// Esta função itera por TODAS as páginas (pode ser lento)
+func (w *SyncWorker) FullResync(ctx context.Context) error <span class="cov0" title="0">{
+        log.Println("🔄 Iniciando Full Resync - lendo todas as entradas do banco local...")
+
+        stats, err := w.localDB.GetStats()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("erro ao obter stats: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">syncCount := 0
+        batch := make([]*pb.VehicleEntry, 0, w.batchSize)
+
+        // Iterar por todas as páginas (página 0 é meta, começar da 1)
+        for pageID := uint64(1); pageID &lt; stats.TotalPages; pageID++ </span><span class="cov0" title="0">{
+                // TODO: Verificar se página é um nó folha antes de tentar ler
+                // Por enquanto, tentamos ler e ignoramos erros
+
+                // Esta é uma abordagem bruta - idealmente teríamos um iterator na B+Tree
+                // Exemplo de como seria:
+                // for entry := range w.localDB.IterateAll(ctx) { ... }
+
+                // Placeholder: log progresso
+                if pageID%100 == 0 </span><span class="cov0" title="0">{
+                        log.Printf("  Processando página %d/%d...\n", pageID, stats.TotalPages)
+                }</span>
+        }
+
+        // Sincronizar batch final
+        <span class="cov0" title="0">if len(batch) &gt; 0 </span><span class="cov0" title="0">{
+                w.syncBatch(ctx, batch)
+        }</span>
+
+        <span class="cov0" title="0">log.Printf("✅ Full Resync completo: %d entradas sincronizadas\n", syncCount)
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package service
+
+import (
+        "context"
+        "fmt"
+        "time"
+
+        "cloud.google.com/go/firestore"
+        "github.com/emersonnjsantos/ParkingZero/backend-api/internal/database"
+        pb "github.com/emersonnjsantos/ParkingZero/pkg/pb"
+        "google.golang.org/grpc/codes"
+        "google.golang.org/grpc/status"
+        "google.golang.org/protobuf/proto"
+)
+
+// VehicleService gerencia operações de entrada/saída de veículos
+type VehicleService struct {
+        localDB         *database.DB
+        firestoreClient *firestore.Client
+        syncQueue       chan *pb.VehicleEntry // Fila para sincronização assíncrona
+}
+
+// NewVehicleService cria um novo serviço de veículos
+func NewVehicleService(localDB *database.DB, firestoreClient *firestore.Client) *VehicleService <span class="cov0" title="0">{
+        return &amp;VehicleService{
+                localDB:         localDB,
+                firestoreClient: firestoreClient,
+                syncQueue:       make(chan *pb.VehicleEntry, 100), // Buffer de 100 entradas
+        }
+}</span>
+
+// RecordVehicleEntry registra a entrada de um veículo (LATÊNCIA CRÍTICA)
+func (s *VehicleService) RecordVehicleEntry(ctx context.Context, req *pb.VehicleEntryRequest) (*pb.VehicleEntryResponse, error) <span class="cov8" title="1">{
+        // Validações
+        if req.GetGarageId() == "" </span><span class="cov8" title="1">{
+                return nil, status.Errorf(codes.InvalidArgument, "garage_id é obrigatório")
+        }</span>
+        <span class="cov8" title="1">if req.GetVehiclePlate() == "" </span><span class="cov8" title="1">{
+                return nil, status.Errorf(codes.InvalidArgument, "vehicle_plate é obrigatória")
+        }</span>
+
+        // Criar entrada
+        <span class="cov8" title="1">compositeKey := database.MakeCompositeKey(req.GarageId, req.VehiclePlate)
+
+        entry := &amp;pb.VehicleEntry{
+                Id:           string(compositeKey), // Converter para string
+                GarageId:     req.GarageId,
+                VehiclePlate: req.VehiclePlate,
+                EntryTime:    req.EntryTime,
+                ExitTime:     0, // Ainda não saiu
+                AmountPaid:   0,
+                Status:       pb.VehicleStatus_PARKED,
+                UserId:       req.UserId,
+        }
+
+        // Se entry_time não foi fornecido, usar timestamp atual
+        if entry.EntryTime == 0 </span><span class="cov8" title="1">{
+                entry.EntryTime = time.Now().Unix()
+        }</span>
+
+        // PASSO 1: Salvar no banco local B+Tree (LATÊNCIA ZERO)
+        <span class="cov8" title="1">protoBytes, err := proto.Marshal(entry)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "falha ao serializar entrada: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">key := []byte(entry.Id)
+        if err := s.localDB.Put(key, protoBytes); err != nil </span><span class="cov8" title="1">{
+                // Se der erro ErrDuplicateKey, veículo já está estacionado
+                if err == database.ErrDuplicateKey </span><span class="cov8" title="1">{
+                        return nil, status.Errorf(codes.AlreadyExists, "veículo já está estacionado nesta garagem")
+                }</span>
+                <span class="cov0" title="0">return nil, status.Errorf(codes.Internal, "falha ao gravar no banco local: %v", err)</span>
+        }
+
+        // PASSO 2: Enviar para fila de sincronização (não bloqueia)
+        <span class="cov8" title="1">select </span>{
+        case s.syncQueue &lt;- entry:<span class="cov8" title="1"></span>
+                // Enfileirado com sucesso
+        default:<span class="cov8" title="1">
+                // Fila cheia - log de warning mas não falha a operação
+                // O sync worker eventualmente pegará do banco
+                fmt.Printf("WARNING: sync queue full, entrada %s será sincronizada no próximo cycle\n", entry.Id)</span>
+        }
+
+        // PASSO 3: Retornar sucesso imediatamente
+        <span class="cov8" title="1">return &amp;pb.VehicleEntryResponse{
+                EntryId:   string(key),
+                Success:   true,
+                Message:   "Entrada registrada com sucesso",
+                EntryTime: entry.EntryTime,
+        }, nil</span>
+}
+
+// RecordVehicleExit registra a saída de um veículo e calcula o valor
+func (s *VehicleService) RecordVehicleExit(ctx context.Context, req *pb.VehicleExitRequest) (*pb.VehicleExitResponse, error) <span class="cov0" title="0">{
+        // Validações
+        if req.GetGarageId() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "garage_id é obrigatório")
+        }</span>
+        <span class="cov0" title="0">if req.GetVehiclePlate() == "" </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "vehicle_plate é obrigatória")
+        }</span>
+
+        // Buscar entrada no banco local
+        <span class="cov0" title="0">key := database.MakeCompositeKey(req.GarageId, req.VehiclePlate)
+        protoBytes, found := s.localDB.Get(key)
+        if !found </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.NotFound, "veículo não encontrado nesta garagem")
+        }</span>
+
+        // Deserializar entrada
+        <span class="cov0" title="0">var entry pb.VehicleEntry
+        if err := proto.Unmarshal(protoBytes, &amp;entry); err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "falha ao deserializar entrada: %v", err)
+        }</span>
+
+        // Verificar se já não saiu
+        <span class="cov0" title="0">if entry.Status == pb.VehicleStatus_EXITED </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.FailedPrecondition, "veículo já saiu às %v", time.Unix(entry.ExitTime, 0))
+        }</span>
+
+        // Definir timestamp de saída
+        <span class="cov0" title="0">exitTime := req.ExitTime
+        if exitTime == 0 </span><span class="cov0" title="0">{
+                exitTime = time.Now().Unix()
+        }</span>
+
+        // Calcular duração e valor
+        <span class="cov0" title="0">durationSeconds := exitTime - entry.EntryTime
+        if durationSeconds &lt; 0 </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.InvalidArgument, "exit_time não pode ser anterior a entry_time")
+        }</span>
+
+        // Buscar preço base da garagem
+        <span class="cov0" title="0">garageDoc, err := s.firestoreClient.Collection("garages").Doc(req.GarageId).Get(ctx)
+        var basePrice float64 = 5.0 // Preço padrão se não encontrar
+        if err == nil </span><span class="cov0" title="0">{
+                data := garageDoc.Data()
+                if price, ok := data["base_price"].(float64); ok </span><span class="cov0" title="0">{
+                        basePrice = price
+                }</span>
+        }
+
+        // Calcular valor total (base_price por hora)
+        <span class="cov0" title="0">hours := float64(durationSeconds) / 3600.0
+        totalAmount := basePrice * hours
+
+        // Atualizar entrada
+        entry.ExitTime = exitTime
+        entry.AmountPaid = totalAmount
+        entry.Status = pb.VehicleStatus_EXITED
+
+        // Salvar no banco local
+        updatedBytes, _ := proto.Marshal(&amp;entry)
+        // Primeiro deletar a entrada antiga
+        s.localDB.Delete(key)
+        // Depois inserir a atualizada (workaround para update)
+        if err := s.localDB.Put(key, updatedBytes); err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "falha ao atualizar entrada: %v", err)
+        }</span>
+
+        // Enviar para fila de sincronização
+        <span class="cov0" title="0">select </span>{
+        case s.syncQueue &lt;- &amp;entry:<span class="cov0" title="0"></span>
+        default:<span class="cov0" title="0">
+                fmt.Printf("WARNING: sync queue full para saída %s\n", entry.Id)</span>
+        }
+
+        // Retornar resposta
+        <span class="cov0" title="0">return &amp;pb.VehicleExitResponse{
+                EntryId:         string(key),
+                TotalAmount:     totalAmount,
+                DurationSeconds: durationSeconds,
+                EntryTime:       entry.EntryTime,
+                ExitTime:        exitTime,
+                Success:         true,
+                Message:         fmt.Sprintf("Total: R$ %.2f | Duração: %dh%dm", totalAmount, durationSeconds/3600, (durationSeconds%3600)/60),
+        }, nil</span>
+}
+
+// GetActiveVehicles retorna todos os veículos ativamente estacionados
+// NOTA: Esta operação pode ser lenta se houver muitas entradas no banco
+// TODO: Implementar índice secundário ou cache em memória
+func (s *VehicleService) GetActiveVehicles(ctx context.Context, req *pb.GetActiveVehiclesRequest) (*pb.GetActiveVehiclesResponse, error) <span class="cov8" title="1">{
+        // Por enquanto, esta operação consulta o Firestore
+        // porque a B+Tree não tem índice secundário por garage_id
+        // TODO: Adicionar suporte a scan com prefixo no B+Tree
+
+        if req.GetGarageId() == "" </span><span class="cov8" title="1">{
+                return nil, status.Errorf(codes.InvalidArgument, "garage_id é obrigatório")
+        }</span>
+
+        // Consultar Firestore temporariamente
+        // Quando o Sync Worker estiver implementado, os dados estarão lá
+        // iter := s.firestoreClient.Collection("vehicle_entries").
+        //         Where("garage_id", "==", req.GarageId).
+        //         Where("status", "==", int32(pb.VehicleStatus_PARKED)).
+        //         Documents(ctx)
+
+        <span class="cov8" title="1">var activeVehicles []*pb.VehicleEntry
+        // TODO: Implementar iteração completa
+
+        return &amp;pb.GetActiveVehiclesResponse{
+                Vehicles:    activeVehicles,
+                TotalActive: int32(len(activeVehicles)),
+        }, nil</span>
+}
+
+// GetVehicleEntry busca uma entrada específica
+func (s *VehicleService) GetVehicleEntry(ctx context.Context, req *pb.GetVehicleEntryRequest) (*pb.VehicleEntry, error) <span class="cov8" title="1">{
+        if req.GetGarageId() == "" </span><span class="cov8" title="1">{
+                return nil, status.Errorf(codes.InvalidArgument, "garage_id é obrigatório")
+        }</span>
+        <span class="cov8" title="1">if req.GetVehiclePlate() == "" </span><span class="cov8" title="1">{
+                return nil, status.Errorf(codes.InvalidArgument, "vehicle_plate é obrigatória")
+        }</span>
+
+        // Buscar no banco local
+        <span class="cov8" title="1">key := database.MakeCompositeKey(req.GarageId, req.VehiclePlate)
+        protoBytes, found := s.localDB.Get(key)
+        if !found </span><span class="cov8" title="1">{
+                return nil, status.Errorf(codes.NotFound, "entrada não encontrada")
+        }</span>
+
+        // Deserializar
+        <span class="cov8" title="1">var entry pb.VehicleEntry
+        if err := proto.Unmarshal(protoBytes, &amp;entry); err != nil </span><span class="cov0" title="0">{
+                return nil, status.Errorf(codes.Internal, "falha ao deserializar: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;entry, nil</span>
+}
+
+// GetSyncQueue retorna o canal de sincronização (para o Sync Worker)
+func (s *VehicleService) GetSyncQueue() &lt;-chan *pb.VehicleEntry <span class="cov0" title="0">{
+        return s.syncQueue
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package service
+
+import (
+        "crypto/ed25519"
+        "crypto/rand"
+        "encoding/base64"
+        "fmt"
+        "log"
+        "os"
+        "time"
+
+        "github.com/golang-jwt/jwt/v5"
+        "github.com/google/uuid"
+)
+
+const (
+        VoucherValidityMinutes = 60 // Voucher válido por 60 minutos após geração
+        EnvVoucherPrivateKey   = "VOUCHER_PRIVATE_KEY"
+        EnvVoucherPublicKey    = "VOUCHER_PUBLIC_KEY"
+)
+
+// SponsorClaim representa um patrocinador no voucher
+type SponsorClaim struct {
+        StoreName string  `json:"store_name"`
+        Amount    float64 `json:"amount"`
+}
+
+// VoucherClaims são as claims do JWT do voucher
+type VoucherClaims struct {
+        jwt.RegisteredClaims
+        ReservationID string         `json:"reservation_id"`
+        GarageID      string         `json:"garage_id"`
+        VehiclePlate  string         `json:"vehicle_plate"`
+        OriginalPrice float64        `json:"original_price"`
+        Sponsors      []SponsorClaim `json:"sponsors"`
+}
+
+// VoucherResult é o resultado da geração do voucher
+type VoucherResult struct {
+        JWT       string
+        JTI       string
+        ExpiresAt int64
+}
+
+// VoucherService é responsável por gerar e validar vouchers JWT
+type VoucherService struct {
+        privateKey ed25519.PrivateKey
+        publicKey  ed25519.PublicKey
+}
+
+// NewVoucherService cria uma nova instância do VoucherService
+func NewVoucherService() (*VoucherService, error) <span class="cov8" title="1">{
+        // Tentar carregar chaves do ambiente
+        privateKeyB64 := os.Getenv(EnvVoucherPrivateKey)
+        publicKeyB64 := os.Getenv(EnvVoucherPublicKey)
+
+        var privateKey ed25519.PrivateKey
+        var publicKey ed25519.PublicKey
+        var err error
+
+        if privateKeyB64 != "" &amp;&amp; publicKeyB64 != "" </span><span class="cov8" title="1">{
+                // Decodificar chaves do ambiente
+                privateKey, err = base64.StdEncoding.DecodeString(privateKeyB64)
+                if err != nil </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("failed to decode private key: %w", err)
+                }</span>
+                <span class="cov8" title="1">publicKey, err = base64.StdEncoding.DecodeString(publicKeyB64)
+                if err != nil </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("failed to decode public key: %w", err)
+                }</span>
+        } else<span class="cov8" title="1"> {
+                // Gerar novas chaves (apenas para desenvolvimento)
+                log.Println("Warning: Generating new Ed25519 keypair. Set VOUCHER_PRIVATE_KEY and VOUCHER_PUBLIC_KEY for production!")
+                publicKey, privateKey, err = ed25519.GenerateKey(rand.Reader)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to generate keypair: %w", err)
+                }</span>
+
+                // Log das chaves para que possam ser configuradas
+                <span class="cov8" title="1">log.Printf("Generated Public Key (base64): %s", base64.StdEncoding.EncodeToString(publicKey))
+                log.Printf("Generated Private Key (base64): %s", base64.StdEncoding.EncodeToString(privateKey))</span>
+        }
+
+        <span class="cov8" title="1">return &amp;VoucherService{
+                privateKey: privateKey,
+                publicKey:  publicKey,
+        }, nil</span>
+}
+
+// GenerateVoucher gera um voucher JWT assinado
+func (v *VoucherService) GenerateVoucher(
+        reservationID string,
+        garageID string,
+        vehiclePlate string,
+        originalPrice float64,
+        sponsors []SponsorClaim,
+) (*VoucherResult, error) <span class="cov8" title="1">{
+        if v.privateKey == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("private key not initialized")
+        }</span>
+
+        <span class="cov8" title="1">jti := uuid.New().String()
+        now := time.Now()
+        expiresAt := now.Add(time.Duration(VoucherValidityMinutes) * time.Minute)
+
+        claims := VoucherClaims{
+                RegisteredClaims: jwt.RegisteredClaims{
+                        ID:        jti,
+                        IssuedAt:  jwt.NewNumericDate(now),
+                        ExpiresAt: jwt.NewNumericDate(expiresAt),
+                        Issuer:    "parkingzero/backend",
+                        Subject:   reservationID,
+                },
+                ReservationID: reservationID,
+                GarageID:      garageID,
+                VehiclePlate:  vehiclePlate,
+                OriginalPrice: originalPrice,
+                Sponsors:      sponsors,
+        }
+
+        token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
+        signedToken, err := token.SignedString(v.privateKey)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to sign token: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;VoucherResult{
+                JWT:       signedToken,
+                JTI:       jti,
+                ExpiresAt: expiresAt.Unix(),
+        }, nil</span>
+}
+
+// ValidateVoucher valida um voucher JWT sem conexão com servidor
+// Esta função é usada pelo app do guarda offline
+func (v *VoucherService) ValidateVoucher(tokenString string) (*VoucherClaims, error) <span class="cov8" title="1">{
+        if v.publicKey == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("public key not initialized")
+        }</span>
+
+        <span class="cov8" title="1">token, err := jwt.ParseWithClaims(tokenString, &amp;VoucherClaims{}, func(token *jwt.Token) (interface{}, error) </span><span class="cov8" title="1">{
+                if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+                }</span>
+                <span class="cov8" title="1">return v.publicKey, nil</span>
+        })
+
+        <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to parse token: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if claims, ok := token.Claims.(*VoucherClaims); ok &amp;&amp; token.Valid </span><span class="cov8" title="1">{
+                return claims, nil
+        }</span>
+
+        <span class="cov0" title="0">return nil, fmt.Errorf("invalid token")</span>
+}
+
+// GetPublicKeyBase64 retorna a chave pública em base64 para distribuição
+// O app do guarda precisa dessa chave para validar vouchers offline
+func (v *VoucherService) GetPublicKeyBase64() string <span class="cov8" title="1">{
+        return base64.StdEncoding.EncodeToString(v.publicKey)
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

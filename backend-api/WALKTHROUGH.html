@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walkthrough - Sistema Multi-Sponsor</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+        }
+        h3 {
+            color: #7f8c8d;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        pre code {
+            background: none;
+            color: #ecf0f1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .mermaid {
+            text-align: center;
+            margin: 30px 0;
+        }
+        hr {
+            border: none;
+            border-top: 2px solid #ecf0f1;
+            margin: 40px 0;
+        }
+        .diff-add {
+            color: #27ae60;
+        }
+        .diff-remove {
+            color: #e74c3c;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .warning {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Walkthrough - Implementação do Sistema Multi-Sponsor</h1>
+
+        <h2>Resumo</h2>
+        <p>Implementado com sucesso um sistema robusto <strong>Multi-Sponsor</strong> com capacidades <strong>Offline First</strong> usando <strong>vouchers JWT</strong>. O backend agora suporta múltiplas lojas patrocinando a mesma reserva de estacionamento, e os guardas podem validar permissões de saída sem conectividade com a internet.</p>
+
+        <hr>
+
+        <h2>Mudanças Realizadas</h2>
+
+        <h3>1. Atualização do Schema Protobuf</h3>
+        <p><strong>Arquivo</strong>: <code>parking_service.proto</code></p>
+
+        <p>Novas mensagens e campos adicionados:</p>
+        <ul>
+            <li><code>SponsorshipRequest</code>: Adicionado <code>sync_id</code> &amp; <code>amount_to_sponsor</code> para patrocínio parcial</li>
+            <li><code>SponsorshipResponse</code>: Adicionado <code>ledger_entry_id</code>, <code>amount_sponsored</code>, <code>current_balance</code>, <code>total_sponsored</code>, <code>exchange_rate</code>, <code>voucher</code></li>
+            <li><code>SponsorshipLedgerEntry</code>: Entrada completa do ledger com <code>entry_id</code>, <code>store_id</code>, <code>amount</code>, <code>exchange_rate</code>, <code>operator_id</code></li>
+            <li><code>SignedVoucher</code>: Voucher JWT com <code>jwt</code>, <code>jti</code>, <code>expires_at</code>, <code>qr_code_data</code></li>
+            <li><code>RegisterUsedVoucherRequest/Response</code>: Registro de voucher offline para anti-fraude</li>
+        </ul>
+
+        <p>Novos RPCs no PaymentService:</p>
+        <ul>
+            <li><code>GetSponsorshipLedger</code>: Consultar histórico de patrocínios</li>
+            <li><code>RegisterUsedVoucher</code>: Registrar uso de voucher para anti-fraude</li>
+        </ul>
+
+        <hr>
+
+        <h3>2. Refatoração do RequestSponsorship</h3>
+        <p><strong>Arquivo</strong>: <code>internal/service/sponsorship.go</code></p>
+
+        <p>Melhorias principais:</p>
+        <ul>
+            <li><strong>Idempotência via <code>sync_id</code></strong>: Previne processamento duplicado para requisições offline</li>
+            <li><strong>Patrocínio Parcial</strong>: <code>amount_to_sponsor</code> permite que múltiplas lojas dividam o valor</li>
+            <li><strong>Contabilidade baseada em Ledger</strong>: Sub-coleção <code>sponsorship_ledger</code> rastreia cada contribuição</li>
+            <li><strong>Status Dinâmico</strong>: <code>TICKET_PARTIALLY_SPONSORED</code> vs <code>TICKET_SPONSORED</code> baseado no saldo restante</li>
+            <li><strong>Geração de Voucher JWT</strong>: Voucher automático quando o saldo chega a zero</li>
+        </ul>
+
+        <pre><code>// Antigo: Pagador único, sobrescreve patrocinador
+{Path: "payer_id", Value: storeID}
+{Path: "amount_to_pay", Value: 0}
+
+// Novo: Ledger multi-sponsor
+ledgerRef := Collection("reservations").Doc(id).Collection("sponsorship_ledger")
+currentBalance = originalPrice - Sum(sponsorships)</code></pre>
+
+        <hr>
+
+        <h3>3. Criação do VoucherService</h3>
+        <p><strong>Arquivo</strong>: <code>internal/service/voucher.go</code> <strong>[NOVO]</strong></p>
+
+        <p>Funcionalidades:</p>
+        <ul>
+            <li><strong>Assinatura Ed25519</strong>: Vouchers JWT assinados criptograficamente</li>
+            <li><strong>Validação Offline</strong>: Guardas validam usando apenas a chave pública (sem servidor)</li>
+            <li><strong>Validade de 60 minutos</strong>: Vouchers expiram após 1 hora</li>
+            <li><strong>Claims Incluem</strong>: reservation_id, garage_id, vehicle_plate, resumo dos patrocinadores</li>
+        </ul>
+
+        <pre><code>type VoucherClaims struct {
+    jwt.RegisteredClaims
+    ReservationID string
+    GarageID      string
+    VehiclePlate  string
+    Sponsors      []SponsorClaim
+}</code></pre>
+
+        <hr>
+
+        <h3>4. Novas Coleções (Schema Firestore)</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Coleção</th>
+                    <th>Propósito</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>reservations/{id}/sponsorship_ledger</code></td>
+                    <td>Histórico de contribuições multi-sponsor</td>
+                </tr>
+                <tr>
+                    <td><code>used_vouchers</code></td>
+                    <td>Anti-fraude: previne reuso de vouchers</td>
+                </tr>
+                <tr>
+                    <td><code>bi_events</code></td>
+                    <td>Log de eventos para inteligência de negócios</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>Resultados da Validação</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Teste</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Go Build</td>
+                    <td class="success">✅ PASSOU</td>
+                </tr>
+                <tr>
+                    <td>Testes B+Tree</td>
+                    <td class="warning">⚠️ Falhas pré-existentes (não relacionadas)</td>
+                </tr>
+                <tr>
+                    <td>Geração Protobuf</td>
+                    <td class="success">✅ PASSOU</td>
+                </tr>
+                <tr>
+                    <td>Dependências JWT</td>
+                    <td class="success">✅ Instaladas (<code>golang-jwt/jwt/v5</code>)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>Próximos Passos</h2>
+        <ol>
+            <li><strong>Configurar Chaves de Produção</strong>: Definir variáveis de ambiente <code>VOUCHER_PRIVATE_KEY</code> e <code>VOUCHER_PUBLIC_KEY</code></li>
+            <li><strong>Distribuir Chave Pública</strong>: Embeber no app mobile do guarda para validação offline</li>
+            <li><strong>Deploy do Backend Atualizado</strong>: Regenerar SDKs cliente a partir do proto atualizado</li>
+            <li><strong>Atualizar Apps Mobile</strong>: Implementar exibição de voucher com QR code</li>
+        </ol>
+
+        <hr>
+
+        <h2>Diagrama da Arquitetura</h2>
+
+        <div class="mermaid">
+flowchart TB
+    subgraph Client["App Mobile (Cliente)"]
+        A["Solicitar Patrocínio"]
+    end
+    
+    subgraph Backend["API Backend"]
+        B["RequestSponsorship"]
+        C["sponsorship_ledger"]
+        D["VoucherService"]
+        E["Voucher JWT"]
+    end
+    
+    subgraph Guard["App Guarda (Offline)"]
+        F["Validar JWT"]
+        G["Chave Pública"]
+    end
+    
+    A --"sync_id, amount"--> B
+    B --"Atualização Atômica"--> C
+    B --"Se saldo=0"--> D
+    D --"Assinar Ed25519"--> E
+    E --"QR Code"--> F
+    G --"Verificar Assinatura"--> F
+        </div>
+
+        <hr>
+
+        <h2>Detalhes Técnicos Importantes</h2>
+
+        <h3>Como Funciona a Validação Offline (JWT)</h3>
+
+        <p>O processo que você sugeriu foi implementado exatamente:</p>
+
+        <ol>
+            <li><strong>No Backend</strong>: Quando o saldo chega a zero, o <code>VoucherService</code> gera um JWT assinado com a chave privada Ed25519</li>
+            <li><strong>No App do Cliente</strong>: O JWT é convertido em QR Code e exibido</li>
+            <li><strong>No App do Guarda (OFFLINE)</strong>: 
+                <ul>
+                    <li>Escaneia o QR Code</li>
+                    <li>Extrai o JWT</li>
+                    <li>Valida matematicamente usando APENAS a chave pública</li>
+                    <li>Não precisa de internet ou conexão com servidor!</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h3>Fluxo Multi-Sponsor</h3>
+
+        <p><strong>Exemplo Prático:</strong></p>
+        <ul>
+            <li>Reserva: R$ 25,00</li>
+            <li>Loja Nike patrocina R$ 10,00 → Status: <code>PARTIALLY_SPONSORED</code>, Saldo: R$ 15,00</li>
+            <li>Loja Starbucks patrocina R$ 15,00 → Status: <code>SPONSORED</code>, Saldo: R$ 0,00</li>
+            <li>Voucher JWT gerado automaticamente</li>
+            <li>Cliente pode sair sem pagar nada!</li>
+        </ul>
+
+        <h3>Anti-Fraude</h3>
+
+        <ul>
+            <li><strong>Idempotência</strong>: <code>sync_id</code> garante que um patrocínio offline não seja processado duas vezes</li>
+            <li><strong>Invoice Única</strong>: Cada nota fiscal só pode ser usada uma vez</li>
+            <li><strong>Voucher Único</strong>: JTI (JWT ID) registrado em <code>used_vouchers</code> para prevenir reuso</li>
+        </ul>
+
+        <hr>
+
+        <h2>Configuração das Chaves JWT</h2>
+
+        <h3>Desenvolvimento (Auto-geradas)</h3>
+
+        <p>Durante o desenvolvimento, as chaves são geradas automaticamente na primeira execução. Você verá no log:</p>
+
+        <pre><code>Warning: Generating new Ed25519 keypair. Set VOUCHER_PRIVATE_KEY and VOUCHER_PUBLIC_KEY for production!
+Generated Public Key (base64): [chave-publica-aqui]
+Generated Private Key (base64): [chave-privada-aqui]</code></pre>
+
+        <h3>Produção (Recomendado)</h3>
+
+        <p>Defina as variáveis de ambiente:</p>
+
+        <pre><code>export VOUCHER_PRIVATE_KEY="[sua-chave-privada-base64]"
+export VOUCHER_PUBLIC_KEY="[sua-chave-publica-base64]"</code></pre>
+
+        <p>A chave pública deve ser embarcada no app mobile do guarda para validação offline.</p>
+
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>

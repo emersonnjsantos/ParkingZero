@@ -1,0 +1,36 @@
+﻿go : # github.com/emersonnjsantos/ParkingZero/backend-
+api/internal/service
+No linha:1 caractere:1
++ go build ./internal/service 2>&1 | Out-File 
+-FilePath build_errors.tx ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (# github 
+   .com/em...nternal/service:String) [], RemoteExcep  
+  tion
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+internal\service\sponsorship.go:90:16: req.GetSyncId 
+undefined (type *pb.SponsorshipRequest has no field 
+or method GetSyncId)
+internal\service\sponsorship.go:156:13: undefined: 
+pb.TicketStatus_TICKET_PARTIALLY_SPONSORED
+internal\service\sponsorship.go:188:26: 
+req.GetAmountToSponsor undefined (type 
+*pb.SponsorshipRequest has no field or method 
+GetAmountToSponsor)
+internal\service\sponsorship.go:242:19: undefined: 
+pb.TicketStatus_TICKET_PARTIALLY_SPONSORED
+internal\service\sponsorship.go:289:39: undefined: 
+pb.TicketStatus_TICKET_PARTIALLY_SPONSORED
+internal\service\sponsorship.go:327:24: undefined: 
+pb.SignedVoucher
+internal\service\sponsorship.go:525:76: undefined: 
+pb.GetSponsorshipLedgerRequest
+internal\service\sponsorship.go:525:110: undefined: 
+pb.SponsorshipLedgerResponse
+internal\service\sponsorship.go:578:75: undefined: 
+pb.RegisterUsedVoucherRequest
+internal\service\sponsorship.go:578:108: undefined: 
+pb.RegisterUsedVoucherResponse
+internal\service\sponsorship.go:327:24: too many 
+errors

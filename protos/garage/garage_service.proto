@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package garage;
+
+option go_package = "github.com/emersonnjsantos/ParkingZero/pkg/garagepb";
+
+import "common/types.proto";
+
+// GarageService — Busca de garagens e sistema de reservas
+service GarageService {
+  // Busca de Garagens
+  rpc SearchGarages (SearchRequest) returns (SearchResponse);
+  rpc GetGarage (GetGarageRequest) returns (Garage);
+
+  // Sistema de Reservas
+  rpc CreateReservation (CreateReservationRequest) returns (Reservation);
+  rpc ListReservations (ListReservationsRequest) returns (ListReservationsResponse);
+  rpc CancelReservation (CancelReservationRequest) returns (CancelReservationResponse);
+}
+
+// === Busca de Garagens ===
+
+message SearchRequest {
+  double latitude = 1;
+  double longitude = 2;
+  int32 radius_meters = 3;
+}
+
+message SearchResponse {
+  repeated Garage garages = 1;
+}
+
+message GetGarageRequest {
+  string garage_id = 1;
+}
+
+message Garage {
+  string id = 1;
+  string name = 2;
+  double base_price = 3;
+  double latitude = 4;
+  double longitude = 5;
+  string image_url = 6;
+  repeated common.Campaign campaigns = 7;
+  string address = 8;
+  string phone = 9;
+  int32 total_spots = 10;
+  int32 available_spots = 11;
+  repeated string amenities = 12;
+}
+
+// === Sistema de Reservas ===
+
+message CreateReservationRequest {
+  string user_id = 1;
+  string garage_id = 2;
+  int64 start_time = 3;
+  int64 end_time = 4;
+  string vehicle_plate = 5;
+}
+
+message Reservation {
+  string id = 1;
+  string user_id = 2;
+  string garage_id = 3;
+  string garage_name = 4;
+  int64 start_time = 5;
+  int64 end_time = 6;
+  string vehicle_plate = 7;
+  double total_price = 8;
+  common.ReservationStatus status = 9;
+  int64 created_at = 10;
+}
+
+message ListReservationsRequest {
+  string user_id = 1;
+  common.ReservationStatus status_filter = 2;
+}
+
+message ListReservationsResponse {
+  repeated Reservation reservations = 1;
+}
+
+message CancelReservationRequest {
+  string reservation_id = 1;
+  string user_id = 2;
+}
+
+message CancelReservationResponse {
+  bool success = 1;
+  string message = 2;
+}

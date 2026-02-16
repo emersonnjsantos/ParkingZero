@@ -1,0 +1,167 @@
+# ParkingZero Microservices — Docker Compose para Desenvolvimento Local
+#
+# Uso:
+#   docker-compose up --build        # Build e iniciar todos
+#   docker-compose up -d             # Background
+#   docker-compose logs -f garage-svc # Logs de um serviço
+#   docker-compose down              # Parar tudo
+
+services:
+  # ============================================
+  # API Gateway — Ponto de entrada único (:8080)
+  # ============================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "8080:8080" # gRPC (Mobile app conecta aqui)
+      - "8084:8081" # Health check
+    environment:
+      - PORT=8080
+      - HEALTH_PORT=8081
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-parkingzero}
+      - GARAGE_SVC_ADDR=garage-svc:50051
+      - VEHICLE_SVC_ADDR=vehicle-svc:50052
+      - PAYMENT_SVC_ADDR=payment-svc:50053
+      - AUTH_SVC_ADDR=auth-svc:50054
+      - DASHBOARD_SVC_ADDR=dashboard-svc:50055
+    depends_on:
+      - garage-svc
+      - vehicle-svc
+      - payment-svc
+      - auth-svc
+      - dashboard-svc
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/health" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ============================================
+  # Garage Service — Garagens + Reservas (:50051)
+  # ============================================
+  garage-svc:
+    build:
+      context: .
+      dockerfile: services/garage-svc/Dockerfile
+    ports:
+      - "50051:50051" # gRPC (interno)
+      - "8081:8081" # Health check
+    environment:
+      - PORT=50051
+      - HEALTH_PORT=8081
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-parkingzero}
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./credentials}:/credentials/service-account.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/health" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ============================================
+  # Vehicle Service — Veículos + B+Tree (:50052)
+  # ============================================
+  vehicle-svc:
+    build:
+      context: .
+      dockerfile: services/vehicle-svc/Dockerfile
+    ports:
+      - "50052:50052" # gRPC (interno)
+      - "8082:8081" # Health check
+    environment:
+      - PORT=50052
+      - HEALTH_PORT=8081
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-parkingzero}
+      - LOCAL_DB_PATH=/data/parkingzero.db
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    volumes:
+      - vehicle-data:/data
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./credentials}:/credentials/service-account.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/health" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ============================================
+  # Payment Service — Patrocínio + Vouchers (:50053)
+  # ============================================
+  payment-svc:
+    build:
+      context: .
+      dockerfile: services/payment-svc/Dockerfile
+    ports:
+      - "50053:50053" # gRPC (interno)
+      - "8083:8081" # Health check
+    environment:
+      - PORT=50053
+      - HEALTH_PORT=8081
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-parkingzero}
+      - VOUCHER_ED25519_KEY=${VOUCHER_ED25519_KEY:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./credentials}:/credentials/service-account.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/health" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ============================================
+  # Auth Service — Cadastro + Perfis (:50054)
+  # ============================================
+  auth-svc:
+    build:
+      context: .
+      dockerfile: services/auth-svc/Dockerfile
+    ports:
+      - "50054:50054"
+      - "8085:8081"
+    environment:
+      - PORT=50054
+      - HEALTH_PORT=8081
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-parkingzero}
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./credentials}:/credentials/service-account.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/health" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ============================================
+  # Dashboard Service — Analytics (:50055)
+  # ============================================
+  dashboard-svc:
+    build:
+      context: .
+      dockerfile: services/dashboard-svc/Dockerfile
+    ports:
+      - "50055:50055"
+      - "8086:8081"
+    environment:
+      - PORT=50055
+      - HEALTH_PORT=8081
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-parkingzero}
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service-account.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./credentials}:/credentials/service-account.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/health" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  vehicle-data:
+    driver: local

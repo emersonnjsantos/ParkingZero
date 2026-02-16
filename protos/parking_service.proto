@@ -172,3 +172,215 @@ message GetVehicleEntryRequest {
   string garage_id = 1;
   string vehicle_plate = 2;
 }
+
+// ====================================================================
+// === Sistema de Patrocínio de Lojas (Sponsorship) ===
+// ====================================================================
+
+service PaymentService {
+  // Cliente envia nota fiscal para validação de patrocínio
+  rpc RequestSponsorship (SponsorshipRequest) returns (SponsorshipResponse);
+  
+  // Consulta status do voucher/patrocínio (App deve fazer polling)
+  rpc GetVoucherStatus (GetVoucherStatusRequest) returns (VoucherStatus);
+  
+  // Agente da guarita verifica permissão de saída
+  rpc VerifyExit (VerifyExitRequest) returns (VerifyExitResponse);
+  
+  // Agente confirma saída física do veículo
+  rpc ConfirmExit (ConfirmExitRequest) returns (ConfirmExitResponse);
+  
+  // === Novos RPCs Multi-Sponsor ===
+  
+  // Consulta histórico completo de patrocínios de uma reserva
+  rpc GetSponsorshipLedger (GetSponsorshipLedgerRequest) returns (SponsorshipLedgerResponse);
+  
+  // Registra voucher usado (sync posterior do dispositivo do guarda)
+  rpc RegisterUsedVoucher (RegisterUsedVoucherRequest) returns (RegisterUsedVoucherResponse);
+}
+
+// === Sponsorship Request/Response ===
+
+message SponsorshipRequest {
+  string reservation_id = 1;
+  string store_id = 2;
+  InvoiceInfo invoice = 3;
+  string sync_id = 4;              // UUID do mobile para idempotência offline
+  double amount_to_sponsor = 5;    // Valor a patrocinar (permite patrocínio parcial)
+}
+
+message InvoiceInfo {
+  string invoice_id = 1;      // ID único da nota fiscal
+  double amount_usd = 2;      // Valor da compra em USD
+  int64 timestamp = 3;        // Data/hora da nota
+  string store_name = 4;      // Nome da loja (para display)
+}
+
+message SponsorshipResponse {
+  bool success = 1;
+  string message = 2;
+  TicketStatus new_status = 3;
+  string error_code = 4;           // INVOICE_ALREADY_USED, AMOUNT_INSUFFICIENT, etc.
+  
+  // === Campos Multi-Sponsor ===
+  string ledger_entry_id = 5;      // ID do registro no ledger
+  double amount_sponsored = 6;     // Valor patrocinado nesta operação
+  double current_balance = 7;      // Saldo restante a pagar (0 = totalmente patrocinado)
+  double total_sponsored = 8;      // Total já patrocinado
+  double exchange_rate = 9;        // Taxa de câmbio usada (USD/BRL)
+  
+  // === Voucher JWT (apenas se current_balance == 0) ===
+  SignedVoucher voucher = 10;      // Voucher assinado para validação offline
+}
+
+// === Voucher Status (App Polling) ===
+
+message GetVoucherStatusRequest {
+  string reservation_id = 1;
+}
+
+message VoucherStatus {
+  string reservation_id = 1;
+  TicketStatus status = 2;
+  string payer_id = 3;             // Deprecated: usar sponsors_summary
+  string payer_name = 4;           // Deprecated: usar sponsors_summary
+  double original_price = 5;
+  double amount_to_pay = 6;        // Deprecated: usar current_balance
+  
+  // === Campos Multi-Sponsor ===
+  double current_balance = 7;      // Saldo restante a pagar
+  double total_sponsored = 8;      // Total já patrocinado
+  repeated SponsorSummary sponsors_summary = 9; // Lista de patrocinadores
+  
+  // === Voucher JWT (apenas se current_balance == 0) ===
+  SignedVoucher voucher = 10;      // Voucher assinado para validação offline
+}
+
+// === Verify Exit (Consulta do Guarda) ===
+
+message VerifyExitRequest {
+  string garage_id = 1;
+  string vehicle_plate = 2;
+}
+
+message VerifyExitResponse {
+  bool authorized = 1;                // TRUE = pode sair, FALSE = precisa pagar
+  string message = 2;                 // Mensagem técnica
+  string display_message = 3;         // "Boa viagem! Cortesia da [StoreName]"
+  TicketStatus status = 4;
+  string payer_name = 5;
+  string action_required = 6;         // NONE, PAYMENT_REQUIRED, VALIDATE_INVOICE
+  double amount_due = 7;              // Valor a pagar (se não patrocinado)
+}
+
+// === Confirm Exit (Guarda confirma saída física) ===
+
+message ConfirmExitRequest {
+  string garage_id = 1;
+  string vehicle_plate = 2;
+  string agent_id = 3;                // ID do agente/guarda
+}
+
+message ConfirmExitResponse {
+  bool success = 1;
+  string message = 2;
+  TicketStatus final_status = 3;      // Deve ser COMPLETED
+}
+
+// === Ticket Status Enum ===
+
+enum TicketStatus {
+  TICKET_STATUS_UNSPECIFIED = 0;
+  TICKET_CREATED = 1;              // Ticket criado, aguardando pagamento
+  TICKET_PARTIALLY_SPONSORED = 2;  // Patrocínio parcial (Multi-Sponsor)
+  TICKET_SPONSORED = 3;            // Totalmente patrocinado (pode sair)
+  TICKET_COMPLETED = 4;            // Veículo saiu (finalizado - não pode reutilizar)
+}
+
+// ====================================================================
+// === Sistema Multi-Sponsor (Ledger de Patrocínios) ===
+// ====================================================================
+
+// Entrada individual no ledger de patrocínios
+message SponsorshipLedgerEntry {
+  string entry_id = 1;             // ID único do registro (era "id")
+  string store_id = 2;             // ID da loja patrocinadora
+  string store_name = 3;           // Nome da loja
+  double amount = 4;               // Valor patrocinado
+  string invoice_id = 5;           // ID da nota fiscal usada
+  int64 timestamp = 6;             // Quando foi patrocinado
+  string sync_id = 7;              // UUID do mobile para idempotência offline
+  double exchange_rate = 8;        // Taxa de câmbio USD/BRL no momento
+  string operator_id = 9;          // ID do operador que executou
+}
+
+// Resumo de patrocinadores (para display rápido)
+message SponsorSummary {
+  string store_name = 1;
+  double amount = 2;
+}
+
+// Request para consultar ledger de patrocínios
+message GetSponsorshipLedgerRequest {
+  string reservation_id = 1;
+}
+
+// Response com histórico completo de patrocínios
+message SponsorshipLedgerResponse {
+  string reservation_id = 1;
+  double original_price = 2;
+  double current_balance = 3;
+  double total_sponsored = 4;
+  TicketStatus status = 5;
+  repeated SponsorshipLedgerEntry entries = 6;
+  SignedVoucher voucher = 7;       // Presente se current_balance == 0
+  int32 entry_count = 8;           // Total de entradas no ledger
+}
+
+// ====================================================================
+// === Voucher JWT Offline (Validação Descentralizada) ===
+// ====================================================================
+
+// Voucher assinado para validação offline
+message SignedVoucher {
+  string jwt = 1;                  // Token JWT assinado com Ed25519
+  string jti = 2;                  // ID único do voucher (para anti-fraude)
+  int64 expires_at = 3;            // Timestamp de expiração (Unix)
+  string qr_code_data = 4;         // Dados para gerar QR Code no app
+}
+
+// Request para validar voucher offline (no dispositivo do guarda)
+message ValidateVoucherOfflineRequest {
+  string signed_voucher_jwt = 1;   // JWT do voucher
+  string garage_id = 2;            // ID da garagem (para validação extra)
+}
+
+// Response da validação offline
+message ValidateVoucherOfflineResponse {
+  bool valid = 1;                  // Se o voucher é válido
+  string vehicle_plate = 2;        // Placa extraída do JWT
+  string garage_id = 3;            // Garagem autorizada
+  int64 expires_at = 4;            // Quando expira
+  string jti = 5;                  // ID único para registro anti-fraude
+  string error_message = 6;        // Mensagem de erro se inválido
+  repeated SponsorSummary sponsors = 7; // Quem pagou
+}
+
+// Request para registrar voucher usado (sync posterior)
+message RegisterUsedVoucherRequest {
+  string jti = 1;                  // ID único do voucher usado
+  string reservation_id = 2;       // ID da reserva
+  string garage_id = 3;            // Onde foi usado
+  string agent_id = 4;             // Quem validou
+  int64 used_at = 5;               // Quando foi usado
+  string vehicle_plate = 6;        // Placa do veículo
+  string sync_id = 7;              // UUID para idempotência
+}
+
+message RegisterUsedVoucherResponse {
+  bool success = 1;
+  string message = 2;
+  string error_code = 3;           // VOUCHER_ALREADY_USED, etc.
+  int64 used_at = 4;               // Quando foi usado
+  string used_by_garage = 5;       // Qual garagem já usou (se fraude)
+}

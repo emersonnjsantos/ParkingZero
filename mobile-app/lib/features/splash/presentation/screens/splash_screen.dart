@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:parkingzero/core/theme/app_theme.dart';
 import 'package:parkingzero/core/routes/app_routes.dart';
 
@@ -176,37 +177,44 @@ class _SplashScreenState extends State<SplashScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Logo image
-        SizedBox(
-          width: 100.w,
-          height: 100.w,
-          child: Image.asset(
-            'assets/logos/LogoMarca.png',
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: AppTheme.logoWhite,
-                child: Center(
-                  child: Icon(
-                    Icons.local_parking,
-                    color: AppTheme.primaryLight,
-                    size: 50.w,
-                  ),
+        // Logo text with two-tone styling - vertically stacked
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Parking',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.quicksand(
+                color: const Color.fromARGB(255, 42, 43, 44),
+                fontSize: 30.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Transform.translate(
+              offset: Offset(0, -5.h), // Move "Zero" para cima para aproximar
+              child: Text(
+                'Zero',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.quicksand(
+                  color: const Color(0xFF2FAC42),
+                  fontSize: 30.sp,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
 
-        // Tagline - muito próxima da logo
-        Transform.translate(
-          offset: Offset(0, -8.h), // Move o texto 8% da altura para cima
-          child: Text(
-            'Estacionamento Inteligente',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppTheme.logoWhite.withValues(alpha: 0.9),
-              letterSpacing: 0.3,
-            ),
+        SizedBox(height: 3.h),
+
+        // Tagline
+        Text(
+          'Estacionamento Inteligente',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppTheme.logoWhite.withValues(alpha: 0.9),
+            letterSpacing: 0.3,
           ),
         ),
       ],
