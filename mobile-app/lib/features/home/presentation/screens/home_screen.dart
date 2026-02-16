@@ -322,17 +322,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
+          const Padding(
+            padding: EdgeInsets.all(24.0),
             child: Column(
               children: [
-                const Icon(
+                Icon(
                   Icons.airplanemode_active,
                   size: 40,
                   color: AppColors.primary,
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8),
+                Text(
                   'Aeroporto',
                   style: TextStyle(
                     fontSize: 24,
@@ -387,17 +387,14 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () async {
+                  final navigator = Navigator.of(context);
                   setState(() => _isNavigating = true);
                   await Future.delayed(const Duration(milliseconds: 800));
-                  if (mounted) {
-                    setState(() => _isNavigating = false);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MapScreen(),
-                      ),
-                    );
-                  }
+                  if (!mounted) return;
+                  setState(() => _isNavigating = false);
+                  navigator.push(
+                    MaterialPageRoute(builder: (context) => const MapScreen()),
+                  );
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4.0),

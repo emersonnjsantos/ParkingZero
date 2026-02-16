@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:grpc/grpc.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:parkingzero/generated/parking_service.pbgrpc.dart';
@@ -35,7 +36,7 @@ class ParkingGrpcClient {
       final response = await _stub.searchGarages(request);
       return response.garages;
     } catch (e) {
-      print('Erro ao buscar garagens: $e');
+      debugPrint('Erro ao buscar garagens: $e');
       rethrow;
     }
   }
@@ -47,7 +48,7 @@ class ParkingGrpcClient {
     try {
       return await _stub.getGarage(request);
     } catch (e) {
-      print('Erro ao obter garagem: $e');
+      debugPrint('Erro ao obter garagem: $e');
       rethrow;
     }
   }
@@ -70,7 +71,7 @@ class ParkingGrpcClient {
     try {
       return await _stub.createReservation(request);
     } catch (e) {
-      print('Erro ao criar reserva: $e');
+      debugPrint('Erro ao criar reserva: $e');
       rethrow;
     }
   }
@@ -90,7 +91,7 @@ class ParkingGrpcClient {
       final response = await _stub.listReservations(request);
       return response.reservations;
     } catch (e) {
-      print('Erro ao listar reservas: $e');
+      debugPrint('Erro ao listar reservas: $e');
       rethrow;
     }
   }
@@ -107,7 +108,7 @@ class ParkingGrpcClient {
     try {
       return await _stub.cancelReservation(request);
     } catch (e) {
-      print('Erro ao cancelar reserva: $e');
+      debugPrint('Erro ao cancelar reserva: $e');
       rethrow;
     }
   }

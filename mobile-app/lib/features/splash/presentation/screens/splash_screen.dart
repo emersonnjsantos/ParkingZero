@@ -232,7 +232,7 @@ class _SplashScreenState extends State<SplashScreen>
           height: 8.w,
           child: CircularProgressIndicator(
             strokeWidth: 0.6.w,
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.logoWhite),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.logoWhite),
           ),
         ),
 

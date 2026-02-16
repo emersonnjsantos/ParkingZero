@@ -15,8 +15,7 @@ class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   bool _isLoading = false;
-  bool _useRealData = true; // Toggle entre dados reais e mockados
-  List<Garage> _garages = [];
+  final bool _useRealData = true; // Toggle entre dados reais e mockados
 
   late ParkingGrpcClient _grpcClient;
 
@@ -52,7 +51,7 @@ class _MapScreenState extends State<MapScreen> {
           longitude: -54.601111,
           radiusMeters: 5000,
         );
-        _garages = garages;
+
         _createMarkersFromGarages(garages);
       } else {
         // Dados mockados para fallback
@@ -60,7 +59,7 @@ class _MapScreenState extends State<MapScreen> {
         _createMockMarkers();
       }
     } catch (e) {
-      print('Erro ao buscar garagens: $e');
+      debugPrint('Erro ao buscar garagens: $e');
       // Fallback para dados mockados em caso de erro
       _createMockMarkers();
       if (mounted) {

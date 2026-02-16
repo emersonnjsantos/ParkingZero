@@ -1,0 +1,11 @@
+name: generated_dart
+description: Generated protobuf Dart files.
+version: 0.0.1
+
+environment:
+  sdk: ^3.3.0
+
+dependencies:
+  fixnum: ^1.1.1
+  grpc: ^5.1.0
+  protobuf: ^6.0.0

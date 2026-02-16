@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:parkingzero/core/services/parking_grpc_client.dart';
-import 'package:parkingzero/generated/parking_service.pbgrpc.dart' as pb;
 import 'package:parkingzero/features/map_search/domain/entities/garage.dart';
 import 'package:parkingzero/features/map_search/domain/repositories/parking_repository.dart';
 
@@ -40,7 +40,7 @@ class ParkingRepositoryImpl implements ParkingRepository {
         );
       }).toList();
     } catch (e) {
-      print('Erro gRPC: $e');
+      debugPrint('Erro gRPC: $e');
       rethrow;
     }
   }

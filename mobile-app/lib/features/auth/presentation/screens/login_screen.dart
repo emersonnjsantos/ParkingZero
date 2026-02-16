@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:parkingzero/core/utils/injection_container.dart';
-import 'package:parkingzero/core/constants/app_constants.dart';
 import 'package:parkingzero/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:parkingzero/features/map_search/presentation/screens/map_screen.dart';
 
@@ -28,9 +27,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 MaterialPageRoute(builder: (_) => const MapScreen()),
               );
             } else if (state is AuthFailure) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Erro: ${state.message}')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('Erro: ${state.message}')));
             }
           },
           builder: (context, state) {
@@ -69,11 +68,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ElevatedButton(
                       onPressed: () {
                         context.read<AuthBloc>().add(
-                              LoginRequested(
-                                _emailController.text,
-                                _passwordController.text,
-                              ),
-                            );
+                          LoginRequested(
+                            _emailController.text,
+                            _passwordController.text,
+                          ),
+                        );
                       },
                       child: const Text('Entrar'),
                     ),

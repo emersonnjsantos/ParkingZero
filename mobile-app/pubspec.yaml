@@ -33,6 +33,7 @@ dependencies:
   flutter_svg: ^2.0.0
   font_awesome_flutter: ^10.7.0
   sizer: ^3.0.1
+  fixnum: ^1.1.1
   grpc: ^5.1.0
   protobuf: ^6.0.0
 

@@ -90,11 +90,11 @@ class OnboardingLocationScreen extends StatelessWidget {
                               child: _buildCallout(text: 'Mais barato'),
                             ),
                             // Ícone de Pessoa/Tempo no Topo
-                            Positioned(
+                            const Positioned(
                               top: 0,
                               child: Column(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.person_outline,
                                     size: 16,
                                     color: AppColors.primary,
