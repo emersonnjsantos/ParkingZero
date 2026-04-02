@@ -1,0 +1,13 @@
+name: parking_common
+description: Pacote Dart compartilhado com protobuf, cliente gRPC e utilitários comuns.
+version: 0.1.0
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  grpc: ^5.1.0
+  fixnum: ^1.1.1
+  protobuf: ^6.0.0
+  get_it: ^9.2.0
+  firebase_auth: ^6.3.0
+  firebase_core: ^4.6.0
