@@ -12,7 +12,20 @@
           "package_name": "com.example.parking_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "621130922343-5oc22q26um8ktb0orq0u1ai65euriui4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.parking_app",
+            "certificate_hash": "249a20ddf5b5fb2596300f0b66a20e999c39f15c"
+          }
+        },
+        {
+          "client_id": "621130922343-utc7pra1iu1cvc0rd9vjnkfuddet1g1c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCR-rEIAhH1Dq_JOAArwIIfT0DwKiapG2Q"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "621130922343-utc7pra1iu1cvc0rd9vjnkfuddet1g1c.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "621130922343-e6rc8qj9pn2h22dt2reg8peao4tgt8np.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.storeApp"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +56,20 @@
           "package_name": "com.example.store_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "621130922343-cclc64p3d14e65qa0aakutca9u2qenfa.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.store_app",
+            "certificate_hash": "249a20ddf5b5fb2596300f0b66a20e999c39f15c"
+          }
+        },
+        {
+          "client_id": "621130922343-utc7pra1iu1cvc0rd9vjnkfuddet1g1c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCR-rEIAhH1Dq_JOAArwIIfT0DwKiapG2Q"
@@ -39,7 +77,63 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "621130922343-utc7pra1iu1cvc0rd9vjnkfuddet1g1c.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "621130922343-e6rc8qj9pn2h22dt2reg8peao4tgt8np.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.storeApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:621130922343:android:4080928f87bd90996017c2",
+        "android_client_info": {
+          "package_name": "com.fronteira.parking.mobile_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "621130922343-u6lmnt46b2liufcqn3p02bg9d013na5f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fronteira.parking.mobile_app",
+            "certificate_hash": "249a20ddf5b5fb2596300f0b66a20e999c39f15c"
+          }
+        },
+        {
+          "client_id": "621130922343-utc7pra1iu1cvc0rd9vjnkfuddet1g1c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCR-rEIAhH1Dq_JOAArwIIfT0DwKiapG2Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "621130922343-utc7pra1iu1cvc0rd9vjnkfuddet1g1c.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "621130922343-e6rc8qj9pn2h22dt2reg8peao4tgt8np.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.storeApp"
+              }
+            }
+          ]
         }
       }
     }

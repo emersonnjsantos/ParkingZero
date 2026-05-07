@@ -49,6 +49,22 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isLoading = true);
+    try {
+      final userCred = await sl<AuthService>().signInWithGoogle();
+      if (userCred != null && mounted) {
+        AppRoutes.navigateAndClear(context, AppRoutes.home);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError('Erro ao entrar com Google: ${_getErrorMessage(e)}');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _handleForgotPassword() {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
@@ -216,6 +232,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        // Login button
                         SizedBox(
                           width: double.infinity,
                           height: 52,
@@ -231,6 +248,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   )
                                 : const Text('Entrar'),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Google Login button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading ? null : _handleGoogleLogin,
+                            icon: const Icon(Icons.g_mobiledata, size: 32),
+                            label: const Text('Entrar com Google'),
                           ),
                         ),
                       ],
