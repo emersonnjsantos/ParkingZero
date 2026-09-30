@@ -1,0 +1,32 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parkingzero/core/constants/app_constants.dart';
+import 'package:parkingzero/core/theme/app_theme.dart';
+import 'package:parkingzero/core/routes/app_routes.dart';
+import 'package:parkingzero/core/utils/injection_container.dart';
+import 'package:parkingzero/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:sizer/sizer.dart';
+
+class ParkingZeroApp extends StatelessWidget {
+  const ParkingZeroApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => sl<AuthBloc>(),
+      child: Sizer(
+        builder: (context, orientation, deviceType) {
+          return MaterialApp(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.light,
+            initialRoute: AppRoutes.splash,
+            routes: AppRoutes.getRoutes(),
+          );
+        },
+      ),
+    );
+  }
+}
